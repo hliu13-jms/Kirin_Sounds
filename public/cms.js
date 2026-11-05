@@ -7,7 +7,7 @@
       admin: 'Portfolio studio', subscribe: 'Join the mailing list', close: 'Close', loading: 'Loading…',
       setupTitle: 'Create your local administrator password', setupHelp: 'This local installation has no administrator yet. Create a password for the root account. Use at least 12 characters.',
       loginTitle: 'Administrator sign in', username: 'Username', password: 'Password', confirmPassword: 'Confirm password', setup: 'Create administrator', login: 'Sign in',
-      hostedHelp: 'This website uses its hosting account to verify its owner. Sign in with the authorized account, then return here.', hostedLogin: 'Sign in with Sites', refreshAuth: 'Check sign-in status',
+      hostedHelp: 'Owner editing uses your authorized ChatGPT account. Sign in to return to this studio. Signing out returns you to kirinsounds.art.', hostedLogin: 'Continue with ChatGPT', refreshAuth: 'Check sign-in status', backToPortfolio: 'Back to portfolio', signingOut: 'Signing out… You will return to kirinsounds.art.',
       profile: 'Profile', projects: 'Projects', audio: 'Audio', photos: 'Photography', subscribers: 'Subscribers', save: 'Save entire website', logout: 'Sign out',
       saved: 'Website saved. The portfolio is refreshing.', unsaved: 'Unsaved changes', savedState: 'All changes saved', discard: 'Discard your unsaved changes and close the studio?',
       name: 'Name', artistName: 'Artist name', intro: 'Introduction', about: 'About', practice: 'Current practice', learning: 'Currently learning', primaryEmail: 'Primary email', secondaryEmail: 'Secondary email', instagram: 'Instagram username', fotoUrl: 'Public Foto URL',
@@ -25,7 +25,7 @@
       admin: '作品集工作室', subscribe: '加入邮件名单', close: '关闭', loading: '载入中…',
       setupTitle: '设置本地管理员密码', setupHelp: '此本地网站尚未设置管理员。请为root账号创建至少12个字符的密码。',
       loginTitle: '管理员登录', username: '用户名', password: '密码', confirmPassword: '再次输入密码', setup: '创建管理员', login: '登录',
-      hostedHelp: '线上网站通过托管账号确认所有者身份。请使用已授权账号登录，然后返回这里。', hostedLogin: '通过Sites登录', refreshAuth: '检查登录状态',
+      hostedHelp: '网站所有者使用已授权的ChatGPT账号登录编辑。登录后会返回工作室，退出后会回到kirinsounds.art。', hostedLogin: '使用ChatGPT登录', refreshAuth: '检查登录状态', backToPortfolio: '返回作品集', signingOut: '正在退出登录…完成后将返回kirinsounds.art。',
       profile: '个人简介', projects: '作品项目', audio: '音频', photos: '摄影', subscribers: '订阅名单', save: '保存全站', logout: '退出登录',
       saved: '网站已保存，作品集正在刷新。', unsaved: '有未保存的修改', savedState: '修改已全部保存', discard: '放弃尚未保存的修改并关闭工作室？',
       name: '姓名', artistName: '艺名', intro: '简短介绍', about: '个人简介', practice: '当前实践', learning: '正在学习', primaryEmail: '主要邮箱', secondaryEmail: '备用邮箱', instagram: 'Instagram用户名', fotoUrl: 'Foto公开主页链接',
@@ -43,7 +43,7 @@
       admin: 'ポートフォリオ・スタジオ', subscribe: 'メールリストに参加', close: '閉じる', loading: '読み込み中…',
       setupTitle: 'ローカル管理者パスワードを設定', setupHelp: 'このローカルサイトには管理者がまだ登録されていません。rootアカウント用に12文字以上のパスワードを設定してください。',
       loginTitle: '管理者ログイン', username: 'ユーザー名', password: 'パスワード', confirmPassword: 'パスワードを再入力', setup: '管理者を作成', login: 'ログイン',
-      hostedHelp: '公開サイトではホスティングのアカウントで所有者を確認します。許可されたアカウントでログインし、ここに戻ってください。', hostedLogin: 'Sitesでログイン', refreshAuth: 'ログイン状態を確認',
+      hostedHelp: '所有者用の編集には、許可されたChatGPTアカウントでログインします。ログイン後はスタジオに戻り、ログアウト後はkirinsounds.artに戻ります。', hostedLogin: 'ChatGPTでログイン', refreshAuth: 'ログイン状態を確認', backToPortfolio: '作品集に戻る', signingOut: 'ログアウト中…完了後、kirinsounds.artに戻ります。',
       profile: 'プロフィール', projects: 'プロジェクト', audio: '音源', photos: '写真', subscribers: '購読者', save: 'サイト全体を保存', logout: 'ログアウト',
       saved: 'サイトを保存しました。表示を更新しています。', unsaved: '未保存の変更あり', savedState: 'すべて保存済み', discard: '未保存の変更を破棄して閉じますか？',
       name: '名前', artistName: 'アーティスト名', intro: '短い紹介', about: '自己紹介', practice: '現在の制作', learning: '学習中のこと', primaryEmail: '主なメールアドレス', secondaryEmail: '予備メールアドレス', instagram: 'Instagramユーザー名', fotoUrl: 'Foto公開プロフィールURL',
@@ -82,7 +82,7 @@
     dialog.addEventListener('click', event => {
       if (event.target === dialog) { close(); return; }
       const button = event.target.closest('[data-cms-action]');
-      if (button) act(button.dataset.cmsAction, button);
+      if (button) { event.preventDefault(); act(button.dataset.cmsAction, button); }
     });
     dialog.addEventListener('input', edit);
     dialog.addEventListener('change', event => {
@@ -111,7 +111,8 @@
   }
 
   function frame(body, footer = '') {
-    dialog.querySelector('.cms-shell').innerHTML = `<header class="cms-header"><div><span class="cms-eyebrow">KIRIN / ${state.mode === 'admin' ? 'STUDIO' : 'MAIL'}</span><h1 id="cms-title" tabindex="-1">${t(state.mode === 'admin' ? 'admin' : 'subscribe')}</h1></div><button class="cms-close" type="button" data-cms-action="close" aria-label="${t('close')}">×</button></header><div id="cms-message" class="cms-message" role="status" aria-live="polite" hidden></div>${body}${footer}`;
+    const back=state.mode === 'admin' && site.hostedStudio ? `<a class="cms-button" style="margin-top:10px;padding:3px 0;min-height:0;border:0;font-size:12px" href="${esc(site.portfolioUrl(lang()))}" target="_top" data-cms-action="back-to-portfolio">← ${t('backToPortfolio')}</a>` : '';
+    dialog.querySelector('.cms-shell').innerHTML = `<header class="cms-header"><div><span class="cms-eyebrow">KIRIN / ${state.mode === 'admin' ? 'STUDIO' : 'MAIL'}</span><h1 id="cms-title" tabindex="-1">${t(state.mode === 'admin' ? 'admin' : 'subscribe')}</h1>${back}</div><button class="cms-close" type="button" data-cms-action="close" aria-label="${t('close')}">×</button></header><div id="cms-message" class="cms-message" role="status" aria-live="polite" hidden></div>${body}${footer}`;
   }
   function message(text, error = false) {
     const el = dialog.querySelector('#cms-message');
@@ -157,12 +158,23 @@
   function close() {
     if (state.busy) { message(t('busy')); return; }
     if (state.mode === 'admin' && state.dirty && !window.confirm(t('discard'))) return;
+    const returnToPortfolio=state.mode === 'admin' && site.hostedStudio;
+    const returnUrl=returnToPortfolio ? site.portfolioUrl(lang()) : '';
     state.request++;
     dialog.close();
     state.mode = null;
     state.content = null;
     state.dirty = false;
+    state.subscribers = null;
+    state.auth = null;
+    dialog.querySelector('.cms-shell').replaceChildren();
+    if(returnToPortfolio){navigateTop(returnUrl);return;}
     state.launcher?.focus?.({preventScroll: true});
+  }
+  function navigateTop(url) {
+    const link=document.createElement('a');
+    link.href=url;link.target='_top';link.rel='noopener';
+    document.body.append(link);link.click();link.remove();
   }
 
   async function api(path, options = {}) {
@@ -195,9 +207,7 @@
 
   async function openAdmin(launcher) {
     if (site.staticFrontend) {
-      const link=document.createElement('a');
-      link.href=site.studioUrl(lang());link.target='_top';link.rel='noopener';
-      document.body.append(link);link.click();link.remove();
+      navigateTop(site.studioUrl(lang()));
       return;
     }
     ensureDialog();
@@ -217,13 +227,13 @@
     const a = state.auth;
     if (!a) return;
     if (a.mode === 'hosted') {
-      const loginUrl = safeLink(a.loginUrl);
-      frame(`<div class="cms-body cms-auth"><h2>${t('loginTitle')}</h2><p>${t('hostedHelp')}</p>${loginUrl ? `<a class="cms-button cms-primary" href="${esc(loginUrl)}">${t('hostedLogin')} ↗</a>` : ''}<button class="cms-button" type="button" data-cms-action="refresh-auth">${t('refreshAuth')}</button></div>`);
+      const loginUrl = site.hostedStudio ? site.signInPath(lang()) : safeLink(a.loginUrl);
+      frame(`<div class="cms-body cms-auth"><h2>${t('loginTitle')}</h2><p>${t('hostedHelp')}</p>${loginUrl ? `<a class="cms-button cms-primary" href="${esc(loginUrl)}" target="_top" data-cms-provider-login>${t('hostedLogin')} ↗</a>` : ''}<button class="cms-button" type="button" data-cms-action="refresh-auth">${t('refreshAuth')}</button></div>`);
     } else {
       const setup = !a.initialized;
       frame(`<form id="cms-auth-form" class="cms-body cms-auth"><h2>${t(setup ? 'setupTitle' : 'loginTitle')}</h2>${setup ? `<p>${t('setupHelp')}</p>` : ''}<label class="cms-field"><span>${t('username')}</span><input name="username" autocomplete="username" value="root" readonly></label><label class="cms-field"><span>${t('password')}</span><input name="password" type="password" required minlength="${setup ? 12 : 1}" maxlength="1024" autocomplete="${setup ? 'new-password' : 'current-password'}"></label>${setup ? `<label class="cms-field"><span>${t('confirmPassword')}</span><input name="confirmPassword" type="password" required minlength="12" maxlength="1024" autocomplete="new-password"></label>` : ''}<button type="submit" class="cms-button cms-primary">${t(setup ? 'setup' : 'login')}</button></form>`);
     }
-    dialog.querySelector('input[name="password"],a,button[data-cms-action="refresh-auth"]')?.focus();
+    dialog.querySelector('input[name="password"],[data-cms-provider-login],button[data-cms-action="refresh-auth"]')?.focus();
   }
   async function authenticate(form) {
     const fields = new FormData(form);
@@ -450,7 +460,7 @@
     finally { setBusy(false); }
   }
   async function act(action, button) {
-    if (action === 'close') { close(); return; }
+    if (action === 'close' || action === 'back-to-portfolio') { close(); return; }
     if (state.busy) return;
     if (action === 'refresh-auth') {
       setBusy(true);
@@ -492,13 +502,18 @@
       setBusy(true);
       try {
         const result=await api('/api/auth/logout',{method:'POST',json:{}});
-        state.content=null;state.dirty=false;state.subscribers=null;
-        if (result.logoutUrl) {
-          const logoutUrl=safeLink(result.logoutUrl);
-          if (!logoutUrl) throw new Error(t('invalidUrl'));
-          location.assign(logoutUrl);
+        state.content=null;state.dirty=false;state.subscribers=null;state.auth=null;
+        if (site.hostedStudio) {
+          const logoutPath=site.signOutPath(lang());
+          const parsed=new URL(logoutPath,location.href);
+          if(parsed.origin!==location.origin || parsed.pathname!=='/signout-with-chatgpt')throw new Error(t('invalidUrl'));
+          // Remove private editor/subscriber DOM before the browser can cache it.
+          frame(`<div class="cms-body"><p>${t('signingOut')}</p></div>`);
+          dialog.close();state.mode=null;state.request++;
+          navigateTop(logoutPath);
           return;
         }
+        frame(`<div class="cms-body"><p>${t('loading')}</p></div>`);
         state.auth=await api('/api/auth/status');renderAuth();
       }
       catch (error) { showError(error); } finally { setBusy(false); }
@@ -532,7 +547,7 @@
   window.PortfolioCMS = Object.freeze({openAdmin:()=>openAdmin(),openSubscribe:()=>openSubscribe()});
   window.addEventListener('beforeunload',event=>{if(state.mode === 'admin' && state.dirty){event.preventDefault();event.returnValue='';}});
   const openRequestedStudio=()=>{
-    if(site.hostedStudio && new URLSearchParams(location.search).get('studio') === '1')openAdmin();
+    if(site.hostedStudio && !site.returningToPortfolio && new URLSearchParams(location.search).get('studio') === '1')openAdmin();
   };
   if(document.readyState === 'loading')document.addEventListener('DOMContentLoaded',openRequestedStudio,{once:true});
   else queueMicrotask(openRequestedStudio);

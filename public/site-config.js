@@ -1,9 +1,26 @@
 (() => {
   'use strict';
   const hostedOrigin = 'https://kirinsounds-portfolio.kirinsounds.chatgpt.site';
+  const portfolioOrigin = 'https://kirinsounds.art';
   const publicHosts = new Set(['hliu13-jms.github.io', 'kirinsounds.art', 'www.kirinsounds.art']);
   const staticFrontend = publicHosts.has(location.hostname.toLowerCase());
   const hostedStudio = location.origin === hostedOrigin;
+  const normalizeLanguage = value => ['en', 'zh', 'ja'].includes(value) ? value : 'en';
+  const portfolioUrl = language => {
+    const url = new URL('/', portfolioOrigin);
+    url.searchParams.set('lang', normalizeLanguage(language));
+    return url.href;
+  };
+  const providerPath = (route, returnFlag, language) => {
+    if (!hostedStudio) return '';
+    const returnQuery = new URLSearchParams({[returnFlag]: '1', lang: normalizeLanguage(language)});
+    const query = new URLSearchParams({return_to: '/?' + returnQuery.toString()});
+    return route + '?' + query.toString();
+  };
+  const signInPath = language => providerPath('/signin-with-chatgpt', 'studio', language);
+  const signOutPath = language => providerPath('/signout-with-chatgpt', 'portfolio_return', language);
+  const returnQuery = new URLSearchParams(location.search);
+  const returningToPortfolio = hostedStudio && returnQuery.get('portfolio_return') === '1';
   const publicApiUrl = path => {
     if (!['/api/content', '/api/subscribe'].includes(path)) throw new Error('This endpoint is not a public portfolio endpoint.');
     return staticFrontend ? hostedOrigin + path : path;
@@ -31,7 +48,7 @@
     };
   };
   const studioUrl = language => {
-    const lang = ['en', 'zh', 'ja'].includes(language) ? language : 'en';
+    const lang = normalizeLanguage(language);
     const url = new URL('/', hostedOrigin);
     url.searchParams.set('studio', '1');
     url.searchParams.set('lang', lang);
@@ -40,11 +57,18 @@
   window.PORTFOLIO_SITE = Object.freeze({
     staticFrontend,
     hostedStudio,
+    returningToPortfolio,
     publicApiOrigin: staticFrontend ? hostedOrigin : '',
     publicCredentials: staticFrontend ? 'omit' : 'same-origin',
     publicApiUrl,
     mediaUrl,
     normalizeContent,
-    studioUrl
+    studioUrl,
+    portfolioUrl,
+    signInPath,
+    signOutPath
   });
+  // This fixed same-origin landing is reached after the platform sign-out.
+  // Incoming return_to/next/referrer URLs are never forwarded or evaluated.
+  if (returningToPortfolio) location.replace(portfolioUrl(returnQuery.get('lang')));
 })();
