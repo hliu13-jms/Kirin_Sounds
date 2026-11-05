@@ -133,14 +133,23 @@ try{
     response=await call('/api/subscribe',{method:'POST',body:{email:'limited@example.test',consent:true},headers:{'CF-Connecting-IP':'198.51.100.99'}});assert.equal(response.status,200);
   }
   response=await call('/api/subscribe',{method:'POST',body:{email:'limited@example.test',consent:true},headers:{'CF-Connecting-IP':'198.51.100.99'}});assert.equal(response.status,429);assert.equal(response.headers.get('Access-Control-Allow-Origin'),origin);
-  // Count failures and successful logins together, with a server-side IP window.
+  // Successful unlocks clear their own failures and do not lock out normal use.
   sqlite.prepare('DELETE FROM request_limits WHERE key LIKE ?').run('login:%');
+  for(let n=0;n<7;n++)await unlock({'CF-Connecting-IP':'203.0.113.9'});
+  assert.equal(sqlite.prepare('SELECT count FROM request_limits WHERE key = ?').get('login:global').count,7);
+  assert.equal(sqlite.prepare('SELECT count FROM request_limits WHERE key = ?').get('login:ip:'+hash(credential+'\0'+'203.0.113.9')),undefined);
+  // Failed attempts remain limited to five per credential/IP in fifteen minutes.
   for(let n=0;n<5;n++){
     response=await call('/api/auth/login',{method:'POST',body:{username:'root',password:'wrong'},headers:{'CF-Connecting-IP':'203.0.113.10'}});assert.equal(response.status,401);
   }
   response=await call('/api/auth/login',{method:'POST',body:{username:'root',password},headers:{'CF-Connecting-IP':'203.0.113.10'}});assert.equal(response.status,429);assert.equal(response.headers.get('Retry-After'),'900');
-  const ipKey='login:ip:'+hash('203.0.113.10');sqlite.prepare('UPDATE request_limits SET window_start = ? WHERE key = ?').run(Math.floor(Date.now()/1000)-901,ipKey);
+  // Rotation starts a new failure bucket even when the previous password was locked.
+  const rotatedPassword='Another disposable test password!';
+  const rotatedCredential='pbkdf2-sha256$100000$'+salt+'$'+pbkdf2Sync(rotatedPassword,Buffer.from(salt,'hex'),100000,32,'sha256').toString('hex');
+  response=await call('/api/auth/login',{method:'POST',body:{username:'root',password:rotatedPassword},headers:{'CF-Connecting-IP':'203.0.113.10'},environment:{...env,ADMIN_PASSWORD_HASH:rotatedCredential}});assert.equal(response.status,200);
+  const ipKey='login:ip:'+hash(credential+'\0'+'203.0.113.10');sqlite.prepare('UPDATE request_limits SET window_start = ? WHERE key = ?').run(Math.floor(Date.now()/1000)-901,ipKey);
   await unlock({'CF-Connecting-IP':'203.0.113.10'});
+  assert.equal(sqlite.prepare('SELECT count FROM request_limits WHERE key = ?').get(ipKey),undefined);
   sqlite.prepare('UPDATE request_limits SET count = 100 WHERE key = ?').run('login:global');
   response=await call('/api/auth/login',{method:'POST',body:{username:'root',password},headers:{'CF-Connecting-IP':'203.0.113.11'}});assert.equal(response.status,429);
   console.log('Hosted password CMS passed: schema migration; PBKDF2 login; opaque hashed sessions; private setup; owner identity disabled; 4h expiry/credential rotation/revocation; exact CORS/origin and CSRF; IP/global limits; persistent CAS CRUD; subscriber dedupe/CSV/deletion; uploads/ranges; unchanged public APIs.');

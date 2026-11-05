@@ -135,19 +135,23 @@ async function authenticatedWrite(request: Request, env: CmsEnv) {
 async function loginLimit(request: Request, env: CmsEnv) {
   const database = db(env), now = Math.floor(Date.now() / 1000);
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-  // Count every attempt before expensive password work, not only failures.
-  for (const [key, seconds, maximum] of [["login:ip:" + await sha256(ip), 900, 5], ["login:global", 60, 100]] as const) {
+  const ipKey = "login:ip:" + await sha256(env.ADMIN_PASSWORD_HASH! + "\0" + ip);
+  // Reserve an attempt before expensive work so concurrent failures cannot
+  // bypass the limit. A successful unlock clears only this credential/IP key.
+  // Credential rotation gets a fresh failure window; global cost stays capped.
+  for (const [key, seconds, maximum] of [[ipKey, 900, 5], ["login:global", 60, 100]] as const) {
     const row = await database.prepare("INSERT INTO request_limits (key, window_start, count) VALUES (?, ?, 1) ON CONFLICT(key) DO UPDATE SET count = CASE WHEN window_start > ? THEN count + 1 ELSE 1 END, window_start = CASE WHEN window_start > ? THEN window_start ELSE excluded.window_start END RETURNING count")
       .bind(key, now, now - seconds, now - seconds).first<{count: number}>();
     if ((row?.count || 0) > maximum) throw new InputError("LOGIN_RATE_LIMIT", "Too many unlock attempts. Try again in 15 minutes.", 429);
   }
   await database.prepare("DELETE FROM request_limits WHERE window_start < ?").bind(now - 86400).run();
+  return ipKey;
 }
 async function login(request: Request, env: CmsEnv) {
   adminOrigin(request, true);
   const record = passwordRecord(env);
   if (!record) throw new InputError("ADMIN_NOT_CONFIGURED", "The administration password has not been configured.", 503);
-  await loginLimit(request, env);
+  const ipKey = await loginLimit(request, env);
   const body = await readJson(request, 4096);
   const password = typeof body?.password === "string" && body.password.length <= 1024 ? body.password : "";
   const salt = Uint8Array.from(record[1].match(/../g)!, value => parseInt(value, 16));
@@ -158,6 +162,7 @@ async function login(request: Request, env: CmsEnv) {
   const token = [...crypto.getRandomValues(new Uint8Array(32))].map(b => b.toString(16).padStart(2, "0")).join("");
   const database = db(env), now = Math.floor(Date.now() / 1000), expiresAt = now + sessionTtl;
   await database.batch([
+    database.prepare("DELETE FROM request_limits WHERE key = ?").bind(ipKey),
     database.prepare("DELETE FROM admin_sessions WHERE expires_at <= ? OR credential_hash != ?").bind(now, await sha256(env.ADMIN_PASSWORD_HASH!)),
     database.prepare("INSERT INTO admin_sessions (token_hash, credential_hash, expires_at) VALUES (?, ?, ?)").bind(await sha256(token), await sha256(env.ADMIN_PASSWORD_HASH!), expiresAt),
   ]);
