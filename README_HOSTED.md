@@ -14,15 +14,15 @@ This is the canonical checkout for both the local Node edition and hosted Site. 
 
 ## Authentication
 
-Configure only `ADMIN_EMAIL` using the native Sites runtime environment tool with the verified Site owner's email. Never put its value in source or the hosting manifest. No separate hosted password, default password, OAuth flow, or API login implementation exists. Both Sites identity headers must be present and the email must match the configured administrator. `root` is the display name for that administrator, not a new account.
+The owner explicitly chose a standalone password lock instead of ChatGPT sign-in. Open `https://kirinsounds.art/admin/`; there is no public homepage login button. The admin interface stays on the portfolio domain and sends authenticated API requests to the existing Worker. Platform sign-in helpers remain available to the underlying Sites integration but do not authorize CMS access.
 
-The frontend must open the returned `loginUrl` as a normal top-level anchor with `target="_top"`, never fetch it. On hosted logout, follow the returned `logoutUrl` as a top-level link; posting `/api/auth/logout` only revokes this CMS's CSRF token, and Sites dispatch owns actual sign-out. All admin writes also require an exact same-origin Origin, HttpOnly CSRF cookie, and the token returned by `/api/auth/status` in `X-CSRF-Token`. CSRF hashes and expiry are stored in D1 and bound to the Sites user ID; no additional secret is required.
+Set the native runtime secret `ADMIN_PASSWORD_HASH` to `pbkdf2-sha256$100000$<32-byte salt as hex>$<32-byte verifier as hex>`. The raw password is never bundled or committed. A missing or invalid verifier disables login; there is no public initial-setup endpoint. Login attempts are rate limited. Successful login creates a random 256-bit bearer session whose hash is stored in D1, expires after four hours, and is revoked on logout. Changing the verifier also invalidates existing sessions.
 
-The maintained portable Sites dev plugin strips spoofed identity headers and optionally supplies its documented local test identity. `npm run start:hosted` is a built Worker preview and does not simulate Sites sign-in. Do not expose that local preview directly as an authenticated production endpoint: production must remain behind Sites dispatch.
+The admin token lives only in the page's memory. Refreshing the page requires re-entering the password. Authenticated API calls use explicit bearer authorization, omit cookies, and restrict cross-origin callers to the canonical HTTPS portfolio origins. Writes additionally check Origin and the matching `X-CSRF-Token`. Public content and subscription calls carry no admin credentials. The local Node edition retains its separate scrypt/cookie login and local `.data` records.
 
 ## Storage and migrations
 
-`db/schema.ts` defines portfolio JSON with compare-and-swap revision, subscribers with a unique normalized email, expiring CSRF tokens, and a bounded subscription-rate bucket. The generated `drizzle/` SQL and metadata must be committed unchanged once applied. No request creates or alters a table.
+`db/schema.ts` defines portfolio JSON with compare-and-swap revision, subscribers with a unique normalized email, hashed expiring admin sessions, and login/subscription rate buckets. The historical CSRF table remains for migration compatibility. The generated `drizzle/` SQL and metadata must be committed unchanged once applied. No request creates or alters a table.
 
 The initial schema-only migration is `drizzle/0000_woozy_jazinda.sql`, with its generated Drizzle snapshot and journal. It has been generated and inspected. For later schema changes, append a migration before rebuilding:
 
@@ -41,7 +41,7 @@ Sites applies the schema migrations to hosted D1 before deployment. The first co
 
 Subscriptions persist and deduplicate in D1. Admin listing, safe CSV export, and deletion are available. This is an email-list collection feature, not automatic newsletter delivery.
 
-The integration check runs the actual API adapter against the generated migration using SQLite and an in-memory R2 fixture. Its fake identity is strictly a test harness, not a login mechanism:
+The integration check runs the actual API adapter against all generated migrations using SQLite and an in-memory R2 fixture. It uses an isolated test password and no production account or records:
 
 ```powershell
 node tests/cms.integration.mjs

@@ -29,6 +29,8 @@
 .cms-button.cms-primary:hover{background:#ffa16b}
 .cms-button.cms-danger{color:#ffb78e;border-color:#9d6444}
 .cms-button.cms-danger:hover{background:#ed85481c}
+.cms-back{display:inline-block;margin-top:12px;color:var(--cms-muted);font-size:12px;text-decoration:none;line-height:1.5}
+.cms-back:hover{color:var(--cms-paper)}
 .cms-message{flex:none;padding:12px 30px;border-bottom:1px solid #718363;background:#31452c;color:#e3f3d8;font-size:13px;max-height:150px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
 .cms-message.is-error{background:#4b3025;color:#ffd7bd;border-color:#9d6444}
 .cms-message[hidden]{display:none}
@@ -87,3 +89,28 @@
 @media(max-width:760px){.cms-dialog{width:calc(100vw - 20px);max-height:calc(100dvh - 20px);border-radius:9px}.cms-shell{max-height:calc(100dvh - 22px)}.cms-header{padding:18px 18px 16px}.cms-body{padding:22px 18px}.cms-tabs{padding:10px 12px;gap:2px;flex-wrap:wrap;overflow:visible}.cms-tab{padding:9px 11px}.cms-footer{padding:14px 18px;flex-wrap:wrap;gap:10px}.cms-footer>div{margin-left:auto}.cms-language-fields{grid-template-columns:1fr;gap:17px}.cms-language-fields textarea{font-size:15px}.cms-message{padding:12px 18px}.cms-item-body{padding:16px}.cms-item>summary{padding:15px}.cms-localized{padding:14px}.cms-dialog input:not([type=checkbox]):not([type=file]),.cms-dialog textarea,.cms-dialog select{font-size:16px}.cms-header h1{font-size:25px}.cms-two-column{grid-template-columns:1fr}.cms-section-tools{align-items:flex-start;flex-wrap:wrap}.cms-subscriber-list b{font-size:14px}}
 @media(max-width:420px){.cms-upload{grid-template-columns:1fr}.cms-upload-button{margin:0 0 10px;justify-self:start}.cms-footer>div{width:100%}.cms-footer .cms-button{flex:1}.cms-section-tools>div{width:100%}.cms-item>summary>span{display:block;margin:4px 0 0 17px}.cms-dialog p.cms-joined{font-size:19px}}
 @media(prefers-reduced-motion:reduce){.cms-dialog,.cms-dialog *{scroll-behavior:auto!important}}
+
+/* The private studio is an ordinary page. Its lock stays small and quiet;
+   the editing surface expands only after successful server authentication. */
+body.admin-page{min-height:100dvh;margin:0;background:#101b18;color:#ece9dc;overflow-x:hidden}
+.admin-masthead{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px clamp(20px,5vw,72px);font-size:12px;border-bottom:1px solid #62715b3d}
+.admin-masthead>a{color:#bdc5b6;text-decoration:none;letter-spacing:.04em}
+.admin-masthead>a:hover{color:#ece9dc}
+.admin-masthead .language{display:flex;gap:2px}
+.admin-masthead .language button{padding:8px 10px;min-height:36px;border:0;background:transparent;color:#929f90;font:inherit;cursor:pointer}
+.admin-masthead .language button[aria-pressed=true]{color:#ece9dc;background:#e5e9d909}
+.admin-masthead .language button:focus-visible,.admin-masthead>a:focus-visible{outline:2px solid #ed8548;outline-offset:3px}
+#admin-page{display:flex;align-items:flex-start;justify-content:center;min-height:calc(100dvh - 86px);box-sizing:border-box;padding:30px 20px}
+body.admin-page .cms-dialog{position:relative;inset:auto;margin:0 auto;width:min(1040px,100%);max-height:calc(100dvh - 148px);border-color:#78866f70;background:#15221d;box-shadow:0 12px 70px #0002;border-radius:8px}
+body.admin-page .cms-dialog .cms-shell{max-height:calc(100dvh - 150px)}
+body.admin-page .cms-dialog.cms-locked{width:min(420px,100%);margin-top:clamp(15px,10vh,100px);box-shadow:none;background:transparent;border-color:#75816d66}
+body.admin-page .cms-locked .cms-header{padding:27px 30px 23px;border-bottom-color:#75816d40}
+body.admin-page .cms-locked .cms-header h1{font-size:26px;font-weight:450}
+body.admin-page .cms-locked .cms-eyebrow{font-size:10px;color:#a9b59e}
+body.admin-page .cms-locked .cms-auth{padding:25px 30px 31px}
+body.admin-page .cms-lock-note{font-size:12px;color:#a9b59e;margin-bottom:22px}
+body.admin-page .cms-locked .cms-auth .cms-field>span{font-size:12px;font-weight:400;color:#bfc7b8}
+body.admin-page .cms-locked .cms-auth .cms-button{margin-top:2px;min-width:95px;background:#d6dcc8;border-color:#d6dcc8;color:#18251d;font-weight:500}
+body.admin-page .cms-locked .cms-auth .cms-button:hover{background:#ecefdf}
+body.admin-page .cms-locked input:not([type=checkbox]){border-color:#72816680;background:#101c17;border-radius:3px}
+@media(max-width:760px){.admin-masthead{padding:18px 20px;gap:12px}.admin-masthead>a{max-width:65%;line-height:1.5}#admin-page{padding:18px 12px;min-height:calc(100dvh - 74px)}body.admin-page .cms-dialog{max-height:calc(100dvh - 112px)}body.admin-page .cms-dialog .cms-shell{max-height:calc(100dvh - 114px)}body.admin-page .cms-dialog.cms-locked{margin-top:5vh}body.admin-page .cms-locked .cms-header{padding:24px}body.admin-page .cms-locked .cms-auth{padding:24px}}

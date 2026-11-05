@@ -1,11 +1,12 @@
 import seedContent from "../data/seed-content.json";
 import { InputError, MAX_CONTENT_BYTES, MAX_UPLOAD_BYTES, normalizeSubscriber, normalizeUploadMime, validateContent, validateUpload } from "./validation.mjs";
 
-type CmsEnv = Pick<Cloudflare.Env, "DB" | "BUCKET" | "ADMIN_EMAIL">;
-type Identity = {userId: string; email: string};
+type CmsEnv = Pick<Cloudflare.Env, "DB" | "BUCKET" | "ADMIN_PASSWORD_HASH">;
+type AdminSession = {userId: "password:root"; token: string; tokenHash: string; expiresAt: number};
 type ContentRow = {content_json: string; revision: number; updated_at: string};
 const encoder = new TextEncoder();
-const csrfTtl = 60 * 60;
+const sessionTtl = 4 * 60 * 60;
+const adminOrigins = new Set(["https://kirinsounds.art", "https://www.kirinsounds.art"]);
 const publicPortfolioOrigins = new Set([
   "https://hliu13-jms.github.io",
   "https://kirinsounds.art",
@@ -22,20 +23,6 @@ function json(value: unknown, status = 200, extra: HeadersInit = {}) {
 function db(env: CmsEnv): D1Database {
   if (!env.DB) throw new InputError("STORAGE_UNAVAILABLE", "Content storage is not configured.", 503);
   return env.DB;
-}
-function identity(request: Request, env: CmsEnv): Identity | null {
-  // Trust these only at the Sites dispatch boundary. The maintained Sites dev
-  // plugin strips client-supplied identity headers in loopback development.
-  const userId = request.headers.get("oai-authenticated-user-id");
-  const email = request.headers.get("oai-authenticated-user-email");
-  const ownerEmail = env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (!ownerEmail || !userId || !email || email.trim().toLowerCase() !== ownerEmail) return null;
-  return {userId, email: email.trim().toLowerCase()};
-}
-function admin(request: Request, env: CmsEnv): Identity {
-  const user = identity(request, env);
-  if (!user) throw new InputError("ADMIN_REQUIRED", "Sign in with the site owner's ChatGPT account.", 401);
-  return user;
 }
 function sameOrigin(request: Request) {
   if (request.headers.get("Origin") !== new URL(request.url).origin || request.headers.get("Sec-Fetch-Site") === "cross-site") {
@@ -77,44 +64,104 @@ function publicPreflight(request: Request, pathname: string) {
     "Cache-Control": "no-store",
   }});
 }
-function csrfCookieName(request: Request) {
-  return new URL(request.url).protocol === "https:" ? "__Host-kirin-csrf" : "kirin-csrf";
-}
-function readCookie(request: Request, name: string) {
-  const matches = (request.headers.get("Cookie") || "").split(";").map(p => p.trim()).filter(p => p.startsWith(name + "="));
-  return matches.length === 1 ? matches[0].slice(name.length + 1) : "";
-}
-function cookieHeader(request: Request, value: string, maxAge = csrfTtl) {
-  return `${csrfCookieName(request)}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${new URL(request.url).protocol === "https:" ? "; Secure" : ""}`;
-}
 async function sha256(value: string) {
   const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(value)));
   return [...bytes].map(b => b.toString(16).padStart(2, "0")).join("");
 }
-async function validCsrf(database: D1Database, token: string, userId: string) {
-  if (!/^[a-f0-9]{64}$/.test(token)) return false;
-  const row = await database.prepare("SELECT token_hash FROM admin_csrf WHERE token_hash = ? AND user_id = ? AND expires_at > ?")
-    .bind(await sha256(token), userId, Math.floor(Date.now() / 1000)).first();
-  return !!row;
+function passwordRecord(env: CmsEnv) {
+  return /^pbkdf2-sha256\$100000\$([a-f0-9]{64})\$([a-f0-9]{64})$/.exec(env.ADMIN_PASSWORD_HASH || "");
 }
-async function csrfForStatus(request: Request, env: CmsEnv, user: Identity) {
-  const database = db(env), previous = readCookie(request, csrfCookieName(request));
-  if (await validCsrf(database, previous, user.userId)) return previous;
-  const token = [...crypto.getRandomValues(new Uint8Array(32))].map(b => b.toString(16).padStart(2, "0")).join("");
-  const now = Math.floor(Date.now() / 1000);
-  await database.batch([
-    database.prepare("DELETE FROM admin_csrf WHERE expires_at <= ?").bind(now),
-    database.prepare("INSERT INTO admin_csrf (token_hash, user_id, expires_at) VALUES (?, ?, ?)").bind(await sha256(token), user.userId, now + csrfTtl),
-  ]);
-  return token;
+function equalSecret(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let difference = 0;
+  for (let i = 0; i < a.length; i++) difference |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return difference === 0;
+}
+function adminOrigin(request: Request, write = false) {
+  const origin = request.headers.get("Origin"), ownOrigin = new URL(request.url).origin;
+  if (origin && adminOrigins.has(origin)) return;
+  if (origin === ownOrigin && request.headers.get("Sec-Fetch-Site") !== "cross-site") return;
+  if (!write && !origin && request.headers.get("Sec-Fetch-Site") === "same-origin") return;
+  throw new InputError("ORIGIN_REJECTED", "Open the administration page on kirinsounds.art.", 403);
+}
+function adminCors(request: Request, response: Response) {
+  const headers = new Headers(response.headers), origin = request.headers.get("Origin");
+  headers.delete("Set-Cookie"); headers.delete("Access-Control-Allow-Credentials"); headers.delete("Access-Control-Allow-Origin");
+  const vary = headers.get("Vary");
+  headers.set("Vary", vary ? `${vary}, Origin` : "Origin");
+  if (origin && (adminOrigins.has(origin) || origin === new URL(request.url).origin)) headers.set("Access-Control-Allow-Origin", origin);
+  return new Response(response.body, {status: response.status, statusText: response.statusText, headers});
+}
+function adminMethod(path: string) {
+  if (path === "/api/auth/status" || path === "/api/admin/subscribers" || path === "/api/admin/subscribers.csv") return "GET";
+  if (path === "/api/auth/login" || path === "/api/auth/logout" || path === "/api/admin/upload") return "POST";
+  if (path === "/api/admin/content") return "PUT";
+  if (/^\/api\/admin\/subscribers\/[a-f0-9-]{36}$/.test(path)) return "DELETE";
+  return null;
+}
+function adminPreflight(request: Request, path: string) {
+  adminOrigin(request, true);
+  const allowed = new Set(["authorization", "content-type", "x-csrf-token", "x-filename"]);
+  const requested = (request.headers.get("Access-Control-Request-Headers") || "").split(",").map(h => h.trim().toLowerCase()).filter(Boolean);
+  const method = adminMethod(path);
+  if (!method || request.headers.get("Access-Control-Request-Method") !== method || requested.some(h => !allowed.has(h))) {
+    throw new InputError("CORS_REJECTED", "This administration request is not allowed.", 403);
+  }
+  return new Response(null, {status: 204, headers: {"Access-Control-Allow-Origin": request.headers.get("Origin")!, "Access-Control-Allow-Methods": method, "Access-Control-Allow-Headers": "Authorization, Content-Type, X-CSRF-Token, X-Filename", "Access-Control-Max-Age": "600", "Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers", "Cache-Control": "no-store"}});
+}
+async function session(request: Request, env: CmsEnv): Promise<AdminSession | null> {
+  // This CMS deliberately does not use platform identities or ambient cookies.
+  // A password secret must be configured privately before any access is possible.
+  if (!passwordRecord(env)) return null;
+  const token = /^Bearer ([a-f0-9]{64})$/.exec(request.headers.get("Authorization") || "")?.[1];
+  if (!token) return null;
+  const tokenHash = await sha256(token);
+  const row = await db(env).prepare("SELECT expires_at FROM admin_sessions WHERE token_hash = ? AND credential_hash = ? AND expires_at > ?")
+    .bind(tokenHash, await sha256(env.ADMIN_PASSWORD_HASH!), Math.floor(Date.now() / 1000)).first<{expires_at: number}>();
+  return row ? {userId: "password:root", token, tokenHash, expiresAt: row.expires_at * 1000} : null;
+}
+async function admin(request: Request, env: CmsEnv) {
+  adminOrigin(request);
+  const user = await session(request, env);
+  if (!user) throw new InputError("ADMIN_REQUIRED", "Unlock the administration page with your password.", 401);
+  return user;
 }
 async function authenticatedWrite(request: Request, env: CmsEnv) {
-  sameOrigin(request);
-  const user = admin(request, env), token = request.headers.get("X-CSRF-Token") || "";
-  if (token !== readCookie(request, csrfCookieName(request)) || !(await validCsrf(db(env), token, user.userId))) {
-    throw new InputError("CSRF_REJECTED", "Your admin session expired. Reopen the admin panel.", 403);
-  }
+  adminOrigin(request, true);
+  const user = await admin(request, env);
+  if (!equalSecret(request.headers.get("X-CSRF-Token") || "", user.token)) throw new InputError("CSRF_REJECTED", "Your admin session expired. Unlock the page again.", 403);
   return user;
+}
+async function loginLimit(request: Request, env: CmsEnv) {
+  const database = db(env), now = Math.floor(Date.now() / 1000);
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  // Count every attempt before expensive password work, not only failures.
+  for (const [key, seconds, maximum] of [["login:ip:" + await sha256(ip), 900, 5], ["login:global", 60, 100]] as const) {
+    const row = await database.prepare("INSERT INTO request_limits (key, window_start, count) VALUES (?, ?, 1) ON CONFLICT(key) DO UPDATE SET count = CASE WHEN window_start > ? THEN count + 1 ELSE 1 END, window_start = CASE WHEN window_start > ? THEN window_start ELSE excluded.window_start END RETURNING count")
+      .bind(key, now, now - seconds, now - seconds).first<{count: number}>();
+    if ((row?.count || 0) > maximum) throw new InputError("LOGIN_RATE_LIMIT", "Too many unlock attempts. Try again in 15 minutes.", 429);
+  }
+  await database.prepare("DELETE FROM request_limits WHERE window_start < ?").bind(now - 86400).run();
+}
+async function login(request: Request, env: CmsEnv) {
+  adminOrigin(request, true);
+  const record = passwordRecord(env);
+  if (!record) throw new InputError("ADMIN_NOT_CONFIGURED", "The administration password has not been configured.", 503);
+  await loginLimit(request, env);
+  const body = await readJson(request, 4096);
+  const password = typeof body?.password === "string" && body.password.length <= 1024 ? body.password : "";
+  const salt = Uint8Array.from(record[1].match(/../g)!, value => parseInt(value, 16));
+  const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({name: "PBKDF2", hash: "SHA-256", salt, iterations: 100000}, key, 256);
+  const actual = [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
+  if (!equalSecret(actual, record[2]) || body?.username !== "root" || !password) throw new InputError("INVALID_CREDENTIALS", "The password is incorrect.", 401);
+  const token = [...crypto.getRandomValues(new Uint8Array(32))].map(b => b.toString(16).padStart(2, "0")).join("");
+  const database = db(env), now = Math.floor(Date.now() / 1000), expiresAt = now + sessionTtl;
+  await database.batch([
+    database.prepare("DELETE FROM admin_sessions WHERE expires_at <= ? OR credential_hash != ?").bind(now, await sha256(env.ADMIN_PASSWORD_HASH!)),
+    database.prepare("INSERT INTO admin_sessions (token_hash, credential_hash, expires_at) VALUES (?, ?, ?)").bind(await sha256(token), await sha256(env.ADMIN_PASSWORD_HASH!), expiresAt),
+  ]);
+  return json({ok: true, mode: "password", authenticated: true, sessionToken: token, csrfToken: token, expiresAt: expiresAt * 1000});
 }
 async function readBytes(request: Request, maximum: number) {
   const declared = request.headers.get("Content-Length");
@@ -205,26 +252,27 @@ async function serveUpload(request: Request, env: CmsEnv, pathname: string) {
   return new Response(body.body, {status: partial ? 206 : 200, headers});
 }
 
-export async function handleCmsRequest(request: Request, env: CmsEnv): Promise<Response | null> {
+async function handleCmsCore(request: Request, env: CmsEnv): Promise<Response | null> {
   const path = new URL(request.url).pathname;
   if (!path.startsWith("/api/") && !path.startsWith("/uploads/")) return null;
   const publicEndpoint = (path === "/api/content" && request.method === "GET") || (path === "/api/subscribe" && request.method === "POST");
   try {
     if (request.method === "OPTIONS" && (path === "/api/content" || path === "/api/subscribe")) return publicPreflight(request, path);
-    const origin = request.headers.get("Origin");
-    if (((origin && origin !== new URL(request.url).origin) || request.headers.get("Sec-Fetch-Site") === "cross-site") && (path.startsWith("/api/auth/") || path.startsWith("/api/admin/"))) {
-      throw new InputError("ORIGIN_REJECTED", "Open the admin panel on its own website to manage content.", 403);
+    if (path.startsWith("/api/auth/") || path.startsWith("/api/admin/")) {
+      if (request.method === "OPTIONS") return adminPreflight(request, path);
+      adminOrigin(request, request.method !== "GET");
     }
     if (path.startsWith("/uploads/")) return await serveUpload(request, env, path);
     if (path === "/api/auth/status" && request.method === "GET") {
-      const user = identity(request, env), csrfToken = user ? await csrfForStatus(request, env, user) : null;
-      return json({mode: "hosted", initialized: !!env.ADMIN_EMAIL, authenticated: !!user, username: user ? "root" : null, csrfToken, loginUrl: "/signin-with-chatgpt?return_to=/", logoutUrl: "/signout-with-chatgpt?return_to=/"}, 200, csrfToken ? {"Set-Cookie": cookieHeader(request, csrfToken)} : {});
+      const user = await session(request, env);
+      return json({mode: "password", initialized: !!passwordRecord(env), setupAllowed: false, authenticated: !!user, username: user ? "root" : null, csrfToken: user?.token || null, expiresAt: user?.expiresAt || null});
     }
-    if ((path === "/api/auth/setup" || path === "/api/auth/login") && request.method === "POST") { sameOrigin(request); throw new InputError("HOSTED_AUTH_ONLY", "Use Sign in with ChatGPT to manage the hosted website.", 405); }
+    if (path === "/api/auth/setup" && request.method === "POST") throw new InputError("WEB_SETUP_DISABLED", "The administration password must be configured privately by the site owner.", 403);
+    if (path === "/api/auth/login" && request.method === "POST") return await login(request, env);
     if (path === "/api/auth/logout" && request.method === "POST") {
       const user = await authenticatedWrite(request, env);
-      await db(env).prepare("DELETE FROM admin_csrf WHERE token_hash = ? AND user_id = ?").bind(await sha256(request.headers.get("X-CSRF-Token")!), user.userId).run();
-      return json({ok: true, logoutUrl: "/signout-with-chatgpt?return_to=/"}, 200, {"Set-Cookie": cookieHeader(request, "", 0)});
+      await db(env).prepare("DELETE FROM admin_sessions WHERE token_hash = ?").bind(user.tokenHash).run();
+      return json({ok: true});
     }
     if (path === "/api/content" && request.method === "GET") { const row = await contentRow(env); return publicCors(request, json({content: JSON.parse(row.content_json), revision: row.revision, updatedAt: row.updated_at})); }
     if (path === "/api/admin/content" && request.method === "PUT") {
@@ -240,7 +288,7 @@ export async function handleCmsRequest(request: Request, env: CmsEnv): Promise<R
     if (path === "/api/admin/upload" && request.method === "POST") return await upload(request, env);
     if (path === "/api/subscribe" && request.method === "POST") return publicCors(request, await subscribe(request, env));
     if ((path === "/api/admin/subscribers" || path === "/api/admin/subscribers.csv") && request.method === "GET") {
-      admin(request, env);
+      await admin(request, env);
       const result = await db(env).prepare("SELECT id, email, name, created_at AS createdAt FROM subscribers ORDER BY created_at DESC").all<{id: string; email: string; name: string; createdAt: string}>();
       if (path.endsWith(".csv")) {
         const rows = [["id", "email", "name", "createdAt"], ...result.results.map(row => [row.id, row.email, row.name, row.createdAt])];
@@ -253,11 +301,19 @@ export async function handleCmsRequest(request: Request, env: CmsEnv): Promise<R
     return json({ok: false, error: {code: "NOT_FOUND", message: "This API endpoint was not found."}}, 404);
   } catch (error) {
     if (error instanceof InputError) {
-      const response = json({ok: false, error: {code: error.code, message: error.message, ...(error.details ? {details: error.details} : {})}}, error.status);
+      const response = json({ok: false, error: {code: error.code, message: error.message, ...(error.details ? {details: error.details} : {})}}, error.status, error.status === 429 ? {"Retry-After": error.code === "LOGIN_RATE_LIMIT" ? "900" : "3600"} : {});
       return publicEndpoint ? publicCors(request, response) : response;
     }
     console.error("Portfolio CMS request failed", error instanceof Error ? error.name : "unknown");
     const response = json({ok: false, error: {code: "SERVER_ERROR", message: "The request could not be completed. Please try again."}}, 500);
     return publicEndpoint ? publicCors(request, response) : response;
   }
+}
+
+export async function handleCmsRequest(request: Request, env: CmsEnv): Promise<Response | null> {
+  const response = await handleCmsCore(request, env);
+  const path = new URL(request.url).pathname;
+  // Apply the same narrow CORS policy to successes, authentication failures,
+  // upload errors and CSV downloads. Cookies are never exposed or required.
+  return response && (path.startsWith("/api/auth/") || path.startsWith("/api/admin/")) ? adminCors(request, response) : response;
 }

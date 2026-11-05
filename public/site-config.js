@@ -5,28 +5,25 @@
   const publicHosts = new Set(['hliu13-jms.github.io', 'kirinsounds.art', 'www.kirinsounds.art']);
   const staticFrontend = publicHosts.has(location.hostname.toLowerCase());
   const hostedStudio = location.origin === hostedOrigin;
+  const adminPage = /^\/admin(?:\/|\/index\.html)?$/.test(location.pathname);
   const normalizeLanguage = value => ['en', 'zh', 'ja'].includes(value) ? value : 'en';
   const portfolioUrl = language => {
-    const url = new URL('/', portfolioOrigin);
+    const url = new URL('/', staticFrontend || hostedStudio ? portfolioOrigin : location.origin);
     url.searchParams.set('lang', normalizeLanguage(language));
     return url.href;
   };
-  const providerPath = (route, returnFlag, language) => {
-    if (!hostedStudio) return '';
-    const returnQuery = new URLSearchParams({[returnFlag]: '1', lang: normalizeLanguage(language)});
-    const query = new URLSearchParams({return_to: '/?' + returnQuery.toString()});
-    return route + '?' + query.toString();
-  };
-  const signInPath = language => providerPath('/signin-with-chatgpt', 'studio', language);
-  const signOutPath = language => providerPath('/signout-with-chatgpt', 'portfolio_return', language);
-  const returnQuery = new URLSearchParams(location.search);
-  const returningToPortfolio = hostedStudio && returnQuery.get('portfolio_return') === '1';
   const publicApiUrl = path => {
     if (!['/api/content', '/api/subscribe'].includes(path)) throw new Error('This endpoint is not a public portfolio endpoint.');
     return staticFrontend ? hostedOrigin + path : path;
   };
+  const adminApiUrl = path => {
+    if (!adminPage || !/^\/api\/(?:auth\/(?:status|login|logout)|admin\/(?:content|upload|subscribers(?:\.csv|\/[a-zA-Z0-9-]+)?))$/.test(path)) throw new Error('This endpoint is not available here.');
+    return staticFrontend ? hostedOrigin + path : path;
+  };
   const mediaUrl = value => {
-    if (!staticFrontend || typeof value !== 'string') return value;
+    if (typeof value !== 'string') return value;
+    if (adminPage && /^\/?assets\//.test(value)) return '/' + value.replace(/^\//, '');
+    if (!staticFrontend) return value;
     // Uploaded media belongs to the persistent backend. Bundled assets belong
     // to this frontend, whose GitHub Pages URL may include a repository path.
     if (/^\/?uploads\//.test(value)) return hostedOrigin + '/' + value.replace(/^\//, '');
@@ -49,26 +46,21 @@
   };
   const studioUrl = language => {
     const lang = normalizeLanguage(language);
-    const url = new URL('/', hostedOrigin);
-    url.searchParams.set('studio', '1');
+    const url = new URL('/admin/', location.origin);
     url.searchParams.set('lang', lang);
     return url.href;
   };
   window.PORTFOLIO_SITE = Object.freeze({
     staticFrontend,
     hostedStudio,
-    returningToPortfolio,
+    adminPage,
     publicApiOrigin: staticFrontend ? hostedOrigin : '',
     publicCredentials: staticFrontend ? 'omit' : 'same-origin',
     publicApiUrl,
+    adminApiUrl,
     mediaUrl,
     normalizeContent,
     studioUrl,
-    portfolioUrl,
-    signInPath,
-    signOutPath
+    portfolioUrl
   });
-  // This fixed same-origin landing is reached after the platform sign-out.
-  // Incoming return_to/next/referrer URLs are never forwarded or evaluated.
-  if (returningToPortfolio) location.replace(portfolioUrl(returnQuery.get('lang')));
 })();

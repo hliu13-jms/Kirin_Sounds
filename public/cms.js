@@ -7,7 +7,7 @@
       admin: 'Portfolio studio', subscribe: 'Join the mailing list', close: 'Close', loading: 'Loading…',
       setupTitle: 'Create your local administrator password', setupHelp: 'This local installation has no administrator yet. Create a password for the root account. Use at least 12 characters.',
       loginTitle: 'Administrator sign in', username: 'Username', password: 'Password', confirmPassword: 'Confirm password', setup: 'Create administrator', login: 'Sign in',
-      hostedHelp: 'Owner editing uses your authorized ChatGPT account. Sign in to return to this studio. Signing out returns you to kirinsounds.art.', hostedLogin: 'Continue with ChatGPT', refreshAuth: 'Check sign-in status', backToPortfolio: 'Back to portfolio', signingOut: 'Signing out… You will return to kirinsounds.art.',
+      lockHelp: 'Private access.', refreshAuth: 'Try again', backToPortfolio: 'Back to portfolio',
       profile: 'Profile', projects: 'Projects', audio: 'Audio', photos: 'Photography', subscribers: 'Subscribers', save: 'Save entire website', logout: 'Sign out',
       saved: 'Website saved. The portfolio is refreshing.', unsaved: 'Unsaved changes', savedState: 'All changes saved', discard: 'Discard your unsaved changes and close the studio?',
       name: 'Name', artistName: 'Artist name', intro: 'Introduction', about: 'About', practice: 'Current practice', learning: 'Currently learning', primaryEmail: 'Primary email', secondaryEmail: 'Secondary email', instagram: 'Instagram username', fotoUrl: 'Public Foto URL',
@@ -25,7 +25,7 @@
       admin: '作品集工作室', subscribe: '加入邮件名单', close: '关闭', loading: '载入中…',
       setupTitle: '设置本地管理员密码', setupHelp: '此本地网站尚未设置管理员。请为root账号创建至少12个字符的密码。',
       loginTitle: '管理员登录', username: '用户名', password: '密码', confirmPassword: '再次输入密码', setup: '创建管理员', login: '登录',
-      hostedHelp: '网站所有者使用已授权的ChatGPT账号登录编辑。登录后会返回工作室，退出后会回到kirinsounds.art。', hostedLogin: '使用ChatGPT登录', refreshAuth: '检查登录状态', backToPortfolio: '返回作品集', signingOut: '正在退出登录…完成后将返回kirinsounds.art。',
+      lockHelp: '私人访问。', refreshAuth: '重试', backToPortfolio: '返回作品集',
       profile: '个人简介', projects: '作品项目', audio: '音频', photos: '摄影', subscribers: '订阅名单', save: '保存全站', logout: '退出登录',
       saved: '网站已保存，作品集正在刷新。', unsaved: '有未保存的修改', savedState: '修改已全部保存', discard: '放弃尚未保存的修改并关闭工作室？',
       name: '姓名', artistName: '艺名', intro: '简短介绍', about: '个人简介', practice: '当前实践', learning: '正在学习', primaryEmail: '主要邮箱', secondaryEmail: '备用邮箱', instagram: 'Instagram用户名', fotoUrl: 'Foto公开主页链接',
@@ -43,7 +43,7 @@
       admin: 'ポートフォリオ・スタジオ', subscribe: 'メールリストに参加', close: '閉じる', loading: '読み込み中…',
       setupTitle: 'ローカル管理者パスワードを設定', setupHelp: 'このローカルサイトには管理者がまだ登録されていません。rootアカウント用に12文字以上のパスワードを設定してください。',
       loginTitle: '管理者ログイン', username: 'ユーザー名', password: 'パスワード', confirmPassword: 'パスワードを再入力', setup: '管理者を作成', login: 'ログイン',
-      hostedHelp: '所有者用の編集には、許可されたChatGPTアカウントでログインします。ログイン後はスタジオに戻り、ログアウト後はkirinsounds.artに戻ります。', hostedLogin: 'ChatGPTでログイン', refreshAuth: 'ログイン状態を確認', backToPortfolio: '作品集に戻る', signingOut: 'ログアウト中…完了後、kirinsounds.artに戻ります。',
+      lockHelp: 'プライベートアクセス。', refreshAuth: '再試行', backToPortfolio: '作品集に戻る',
       profile: 'プロフィール', projects: 'プロジェクト', audio: '音源', photos: '写真', subscribers: '購読者', save: 'サイト全体を保存', logout: 'ログアウト',
       saved: 'サイトを保存しました。表示を更新しています。', unsaved: '未保存の変更あり', savedState: 'すべて保存済み', discard: '未保存の変更を破棄して閉じますか？',
       name: '名前', artistName: 'アーティスト名', intro: '短い紹介', about: '自己紹介', practice: '現在の制作', learning: '学習中のこと', primaryEmail: '主なメールアドレス', secondaryEmail: '予備メールアドレス', instagram: 'Instagramユーザー名', fotoUrl: 'Foto公開プロフィールURL',
@@ -65,7 +65,13 @@
   const emptyText = () => ({en: '', zh: '', ja: ''});
   const clone = value => JSON.parse(JSON.stringify(value));
   const state = {mode: null, auth: null, content: null, revision: null, dirty: false, busy: false, tab: 'profile', subscribers: null, launcher: null, request: 0, focusState: null, renderedTab: null};
-  let dialog;
+  // The hosted administrator token stays in this tab's memory only. It is
+  // never written into a URL, browser storage, a cookie, or rendered HTML.
+  let dialog, sessionToken = '';
+  const adminEndpoint = path => site.staticFrontend ? site.adminApiUrl(path) : path;
+  const mediaUrl = value => site.mediaUrl ? site.mediaUrl(value) : value;
+  const passwordMode = () => state.auth?.mode === 'password';
+  const showDialog = () => site.adminPage ? dialog.show() : dialog.showModal();
 
   function ensureDialog() {
     if (dialog) return;
@@ -73,14 +79,14 @@
     dialog.className = 'cms-dialog';
     dialog.setAttribute('aria-labelledby', 'cms-title');
     dialog.innerHTML = '<div class="cms-shell"></div>';
-    document.body.append(dialog);
+    (site.adminPage ? document.querySelector('#admin-page') || document.body : document.body).append(dialog);
     dialog.addEventListener('keydown', event => event.stopPropagation());
     dialog.addEventListener('invalid', event => {
       for (let parent=event.target.parentElement;parent && parent!==dialog;parent=parent.parentElement) if(parent.tagName === 'DETAILS')parent.open=true;
     }, true);
     dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
     dialog.addEventListener('click', event => {
-      if (event.target === dialog) { close(); return; }
+      if (event.target === dialog && !site.adminPage) { close(); return; }
       const button = event.target.closest('[data-cms-action]');
       if (button) { event.preventDefault(); act(button.dataset.cmsAction, button); }
     });
@@ -111,8 +117,9 @@
   }
 
   function frame(body, footer = '') {
-    const back=state.mode === 'admin' && site.hostedStudio ? `<a class="cms-button" style="margin-top:10px;padding:3px 0;min-height:0;border:0;font-size:12px" href="${esc(site.portfolioUrl(lang()))}" target="_top" data-cms-action="back-to-portfolio">← ${t('backToPortfolio')}</a>` : '';
-    dialog.querySelector('.cms-shell').innerHTML = `<header class="cms-header"><div><span class="cms-eyebrow">KIRIN / ${state.mode === 'admin' ? 'STUDIO' : 'MAIL'}</span><h1 id="cms-title" tabindex="-1">${t(state.mode === 'admin' ? 'admin' : 'subscribe')}</h1>${back}</div><button class="cms-close" type="button" data-cms-action="close" aria-label="${t('close')}">×</button></header><div id="cms-message" class="cms-message" role="status" aria-live="polite" hidden></div>${body}${footer}`;
+    const back=state.mode === 'admin' && (site.hostedStudio || site.adminPage) ? `<a class="cms-back" href="${esc(site.portfolioUrl(lang()))}" data-cms-action="back-to-portfolio">← ${t('backToPortfolio')}</a>` : '';
+    dialog.classList.toggle('cms-locked', state.mode === 'admin' && !state.auth?.authenticated);
+    dialog.querySelector('.cms-shell').innerHTML = `<header class="cms-header"><div><span class="cms-eyebrow">KIRIN / ${state.mode === 'admin' ? 'STUDIO' : 'MAIL'}</span><h1 id="cms-title" tabindex="-1">${site.adminPage ? 'Studio' : t(state.mode === 'admin' ? 'admin' : 'subscribe')}</h1>${back}</div>${site.adminPage ? '' : `<button class="cms-close" type="button" data-cms-action="close" aria-label="${t('close')}">×</button>`}</header><div id="cms-message" class="cms-message" role="status" aria-live="polite" hidden></div>${body}${footer}`;
   }
   function message(text, error = false) {
     const el = dialog.querySelector('#cms-message');
@@ -158,7 +165,7 @@
   function close() {
     if (state.busy) { message(t('busy')); return; }
     if (state.mode === 'admin' && state.dirty && !window.confirm(t('discard'))) return;
-    const returnToPortfolio=state.mode === 'admin' && site.hostedStudio;
+    const returnToPortfolio=state.mode === 'admin' && (site.hostedStudio || site.adminPage);
     const returnUrl=returnToPortfolio ? site.portfolioUrl(lang()) : '';
     state.request++;
     dialog.close();
@@ -167,6 +174,7 @@
     state.dirty = false;
     state.subscribers = null;
     state.auth = null;
+    sessionToken = '';
     dialog.querySelector('.cms-shell').replaceChildren();
     if(returnToPortfolio){navigateTop(returnUrl);return;}
     state.launcher?.focus?.({preventScroll: true});
@@ -180,11 +188,14 @@
   async function api(path, options = {}) {
     const headers = new Headers(options.headers);
     const method = String(options.method || 'GET').toUpperCase();
-    if (site.staticFrontend && !((path === '/api/content' && method === 'GET') || (path === '/api/subscribe' && method === 'POST'))) throw new Error(t('hostedHelp'));
-    if (!site.staticFrontend && method !== 'GET' && state.auth?.csrfToken) headers.set('X-CSRF-Token', state.auth.csrfToken);
+    const isAdmin = /^\/api\/(auth|admin)\//.test(path);
+    const isPublic = (path === '/api/content' && method === 'GET') || (path === '/api/subscribe' && method === 'POST');
+    if (site.staticFrontend && !(isPublic || (site.adminPage && isAdmin))) throw new Error(t('backendUnavailable'));
+    if (isAdmin && sessionToken) headers.set('Authorization', 'Bearer ' + sessionToken);
+    if (method !== 'GET' && state.auth?.csrfToken && (!site.staticFrontend || (site.adminPage && isAdmin))) headers.set('X-CSRF-Token', state.auth.csrfToken);
     if (options.json !== undefined) { headers.set('Content-Type', 'application/json'); options.body = JSON.stringify(options.json); }
-    if (site.staticFrontend) headers.delete('X-CSRF-Token');
-    const endpoint = site.staticFrontend ? site.publicApiUrl(path) : path;
+    if (!isAdmin) { headers.delete('Authorization'); if (site.staticFrontend) headers.delete('X-CSRF-Token'); }
+    const endpoint = site.staticFrontend ? isAdmin ? adminEndpoint(path) : site.publicApiUrl(path) : path;
     const response = await fetch(endpoint, {...options, method, headers, credentials: site.staticFrontend ? 'omit' : 'same-origin', cache: 'no-store'});
     const isJson = (response.headers.get('Content-Type') || '').includes('application/json');
     const result = isJson ? await response.json() : null;
@@ -206,15 +217,15 @@
   }
 
   async function openAdmin(launcher) {
-    if (site.staticFrontend) {
-      navigateTop(site.studioUrl(lang()));
+    if (site.staticFrontend && !site.adminPage) {
+      navigateTop(new URL('/admin/?lang=' + lang(), location.origin).href);
       return;
     }
     ensureDialog();
     if (dialog.open) return;
     state.mode = 'admin'; state.launcher = launcher || document.activeElement; state.tab = 'profile'; state.dirty = false; state.content = null; state.auth = null; state.subscribers = null;
     frame(`<div class="cms-body"><p>${t('loading')}</p></div>`);
-    dialog.showModal();
+    showDialog();
     const request = ++state.request;
     try {
       const auth = await api('/api/auth/status');
@@ -226,24 +237,28 @@
   function renderAuth() {
     const a = state.auth;
     if (!a) return;
-    if (a.mode === 'hosted') {
-      const loginUrl = site.hostedStudio ? site.signInPath(lang()) : safeLink(a.loginUrl);
-      frame(`<div class="cms-body cms-auth"><h2>${t('loginTitle')}</h2><p>${t('hostedHelp')}</p>${loginUrl ? `<a class="cms-button cms-primary" href="${esc(loginUrl)}" target="_top" data-cms-provider-login>${t('hostedLogin')} ↗</a>` : ''}<button class="cms-button" type="button" data-cms-action="refresh-auth">${t('refreshAuth')}</button></div>`);
+    if ((site.staticFrontend && a.mode !== 'password') || (a.mode === 'password' && !a.initialized)) {
+      frame(`<div class="cms-body cms-auth"><p>${t('backendUnavailable')}</p><button class="cms-button" type="button" data-cms-action="refresh-auth">${t('refreshAuth')}</button></div>`);
     } else {
-      const setup = !a.initialized;
-      frame(`<form id="cms-auth-form" class="cms-body cms-auth"><h2>${t(setup ? 'setupTitle' : 'loginTitle')}</h2>${setup ? `<p>${t('setupHelp')}</p>` : ''}<label class="cms-field"><span>${t('username')}</span><input name="username" autocomplete="username" value="root" readonly></label><label class="cms-field"><span>${t('password')}</span><input name="password" type="password" required minlength="${setup ? 12 : 1}" maxlength="1024" autocomplete="${setup ? 'new-password' : 'current-password'}"></label>${setup ? `<label class="cms-field"><span>${t('confirmPassword')}</span><input name="confirmPassword" type="password" required minlength="12" maxlength="1024" autocomplete="new-password"></label>` : ''}<button type="submit" class="cms-button cms-primary">${t(setup ? 'setup' : 'login')}</button></form>`);
+      const setup = a.mode !== 'password' && !a.initialized;
+      const userField = a.mode === 'password' ? '<input type="text" name="username" autocomplete="username" value="root" readonly class="cms-honeypot" tabindex="-1" aria-hidden="true">' : `<label class="cms-field"><span>${t('username')}</span><input name="username" autocomplete="username" value="root" readonly></label>`;
+      frame(`<form id="cms-auth-form" class="cms-body cms-auth">${site.adminPage ? `<p class="cms-lock-note">${t('lockHelp')}</p>` : `<h2>${t(setup ? 'setupTitle' : 'loginTitle')}</h2>`}${setup ? `<p>${t('setupHelp')}</p>` : ''}${userField}<label class="cms-field"><span>${t('password')}</span><input name="password" type="password" required minlength="${setup ? 12 : 1}" maxlength="1024" autocomplete="${setup ? 'new-password' : 'current-password'}"></label>${setup ? `<label class="cms-field"><span>${t('confirmPassword')}</span><input name="confirmPassword" type="password" required minlength="12" maxlength="1024" autocomplete="new-password"></label>` : ''}<button type="submit" class="cms-button cms-primary">${t(setup ? 'setup' : 'login')}</button></form>`);
     }
-    dialog.querySelector('input[name="password"],[data-cms-provider-login],button[data-cms-action="refresh-auth"]')?.focus();
+    dialog.querySelector('input[name="password"],button[data-cms-action="refresh-auth"]')?.focus();
   }
   async function authenticate(form) {
     const fields = new FormData(form);
     const password = fields.get('password');
-    const setup = !state.auth.initialized;
+    const setup = !passwordMode() && !state.auth.initialized;
     if (setup && password.length < 12) { message(t('passwordShort'), true); return; }
     if (setup && password !== fields.get('confirmPassword')) { message(t('mismatch'), true); return; }
     setBusy(true);
     try {
-      await api(setup ? '/api/auth/setup' : '/api/auth/login', {method: 'POST', json: setup ? {password} : {username: 'root', password}});
+      const result = await api(setup ? '/api/auth/setup' : '/api/auth/login', {method: 'POST', json: setup ? {password} : {username: 'root', password}});
+      if (passwordMode()) {
+        if (typeof result.sessionToken !== 'string' || !/^[a-f0-9]{64}$/.test(result.sessionToken)) throw new Error(t('requestFailed'));
+        sessionToken = result.sessionToken;
+      }
       form.reset();
       state.auth = await api('/api/auth/status');
       if (state.auth.authenticated) await loadEditor(); else renderAuth();
@@ -282,7 +297,7 @@
   }
   function uploadField(label, path, kind) {
     const source = get(path);
-    const preview = kind === 'image' && safeMedia(source) ? `<img class="cms-media-preview" src="${esc(source)}" alt="" loading="lazy">` : '';
+    const preview = kind === 'image' && safeMedia(source) ? `<img class="cms-media-preview" src="${esc(mediaUrl(source))}" alt="" loading="lazy">` : '';
     const accept = kind === 'image' ? 'image/jpeg,image/png,image/webp,image/gif,image/avif' : kind === 'audio' ? 'audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/mp4,audio/aac,audio/flac,audio/webm' : 'image/jpeg,image/png,image/webp,image/gif,image/avif,audio/*,video/mp4,video/webm,application/pdf';
     return `<div class="cms-upload">${field(label, path, {required: true})}<label class="cms-upload-button"><span>${t('upload')}</span><input type="file" accept="${accept}" data-upload-path="${esc(JSON.stringify(path))}" data-upload-kind="${kind}" aria-label="${esc(t('upload') + ' · ' + label)}"></label>${preview}<p class="cms-hint">${t('uploadHelp')}</p></div>`;
   }
@@ -294,7 +309,7 @@
     return `<div class="cms-section-tools"><span>${state.content.projects.length} / ${t('projects')}</span><button type="button" class="cms-button" data-cms-action="add-project">＋ ${t('addProject')}</button></div>${state.content.projects.length ? state.content.projects.map((p, i) => `<details class="cms-item" data-cms-item="project-${esc(p.id)}" ${i === state.content.projects.length - 1 && p.id.startsWith('project-') ? 'open' : ''}><summary>${esc(p.title || p.id)}<span>${esc(p.id)}</span></summary><div class="cms-item-body"><div class="cms-row-actions">${orderButtons('project', i, state.content.projects.length)}<button type="button" class="cms-button cms-danger" data-cms-action="delete-project" data-index="${i}">${t('delete')}</button></div><div class="cms-two-column">${field(t('id'), ['projects',i,'id'], {required:true, pattern:'[A-Za-z0-9][A-Za-z0-9_-]{0,79}',maxlength:80})}${field(t('title'), ['projects',i,'title'], {required:true, maxlength:200})}<label class="cms-field"><span>${t('category')}</span><select data-cms-path="${esc(JSON.stringify(['projects',i,'category']))}"><option value="composition" ${p.category === 'composition' ? 'selected' : ''}>${t('composition')}</option><option value="study" ${p.category === 'study' ? 'selected' : ''}>${t('study')}</option></select></label></div>${uploadField(t('image'), ['projects',i,'image'], 'image')}<fieldset class="cms-audio-selection"><legend>${t('projectAudio')}</legend>${Object.keys(state.content.audio).length ? Object.keys(state.content.audio).map(id => `<label><input type="checkbox" data-project-audio="${i}" value="${esc(id)}" ${p.audioIds?.includes(id) ? 'checked' : ''}><span>${esc(id)}</span></label>`).join('') : `<p class="cms-hint">${t('noAudio')}</p>`}</fieldset>${['status','summary','role','tools','process','note'].map(k => multilingual(k, ['projects',i,k], k !== 'status' && k !== 'tools')).join('')}</div></details>`).join('') : `<p>${t('noProjects')}</p>`}`;
   }
   function audioPanel() {
-    return `<div class="cms-section-tools"><span>${Object.keys(state.content.audio).length} / ${t('audio')}</span><button type="button" class="cms-button" data-cms-action="add-audio">＋ ${t('addAudio')}</button></div><p class="cms-hint">${t('audioHelp')}</p>${Object.entries(state.content.audio).map(([id, a]) => `<details class="cms-item" data-cms-item="audio-${esc(id)}"><summary>${esc(id)}<span>${Number(a.duration || 0).toFixed(2)} s</span></summary><div class="cms-item-body"><div class="cms-row-actions"><button type="button" class="cms-button cms-danger" data-cms-action="delete-audio" data-id="${esc(id)}">${t('delete')}</button></div><label class="cms-field"><span>${t('id')}</span><input value="${esc(id)}" data-audio-rename="${esc(id)}" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,79}" maxlength="80" required></label>${uploadField(t('src'), ['audio',id,'src'], 'audio')}${field(t('duration'), ['audio',id,'duration'], {type:'number',required:true})}${safeMedia(a.src) ? `<audio class="cms-audio-preview" controls preload="none" src="${esc(a.src)}"></audio>` : ''}</div></details>`).join('')}`;
+    return `<div class="cms-section-tools"><span>${Object.keys(state.content.audio).length} / ${t('audio')}</span><button type="button" class="cms-button" data-cms-action="add-audio">＋ ${t('addAudio')}</button></div><p class="cms-hint">${t('audioHelp')}</p>${Object.entries(state.content.audio).map(([id, a]) => `<details class="cms-item" data-cms-item="audio-${esc(id)}"><summary>${esc(id)}<span>${Number(a.duration || 0).toFixed(2)} s</span></summary><div class="cms-item-body"><div class="cms-row-actions"><button type="button" class="cms-button cms-danger" data-cms-action="delete-audio" data-id="${esc(id)}">${t('delete')}</button></div><label class="cms-field"><span>${t('id')}</span><input value="${esc(id)}" data-audio-rename="${esc(id)}" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,79}" maxlength="80" required></label>${uploadField(t('src'), ['audio',id,'src'], 'audio')}${field(t('duration'), ['audio',id,'duration'], {type:'number',required:true})}${safeMedia(a.src) ? `<audio class="cms-audio-preview" controls preload="none" src="${esc(mediaUrl(a.src))}"></audio>` : ''}</div></details>`).join('')}`;
   }
   function photoPanel() {
     return `<div class="cms-section-tools"><span>${state.content.photos.length} / ${t('photos')}</span><button type="button" class="cms-button" data-cms-action="add-photo">＋ ${t('addPhoto')}</button></div>${state.content.photos.length ? state.content.photos.map((p, i) => `<details class="cms-item" data-cms-item="photo-${esc(p.id)}"><summary>${esc(localized(p.title) || p.id)}<span>${esc(p.id)}</span></summary><div class="cms-item-body"><div class="cms-row-actions">${orderButtons('photo',i,state.content.photos.length)}<button type="button" class="cms-button cms-danger" data-cms-action="delete-photo" data-index="${i}">${t('delete')}</button></div>${field(t('id'), ['photos',i,'id'], {required:true, pattern:'[A-Za-z0-9][A-Za-z0-9_-]{0,79}',maxlength:80})}${uploadField(t('src'), ['photos',i,'src'], 'image')}${multilingual('title',['photos',i,'title'],false)}${multilingual('caption',['photos',i,'caption'])}</div></details>`).join('') : `<p>${t('noPhotos')}</p>`}`;
@@ -424,7 +439,7 @@
       let done = false;
       const finish = value => { if (done) return; done=true; clearTimeout(timer); media.removeAttribute('src'); media.load(); resolve(value); };
       const timer = setTimeout(() => finish(null),8000);
-      media.preload='metadata'; media.onloadedmetadata=() => finish(Number.isFinite(media.duration) ? media.duration : null); media.onerror=() => finish(null); media.src=url;
+      media.preload='metadata'; media.onloadedmetadata=() => finish(Number.isFinite(media.duration) ? media.duration : null); media.onerror=() => finish(null); media.src=mediaUrl(url);
     });
   }
   async function measureAudioUrl(path) {
@@ -451,7 +466,9 @@
   async function exportSubscribers() {
     setBusy(true);
     try {
-      const response = await fetch('/api/admin/subscribers.csv', {credentials:'same-origin',cache:'no-store'});
+      const headers = new Headers();
+      if (sessionToken) headers.set('Authorization', 'Bearer ' + sessionToken);
+      const response = await fetch(adminEndpoint('/api/admin/subscribers.csv'), {headers,credentials:site.staticFrontend ? 'omit' : 'same-origin',cache:'no-store'});
       if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(data?.error?.message || `${t('requestFailed')} (${response.status})`); }
       if (!(response.headers.get('Content-Type') || '').includes('text/csv')) throw new Error(t('requestFailed'));
       const url = URL.createObjectURL(await response.blob());
@@ -501,18 +518,9 @@
       if (state.dirty && !window.confirm(t('discard'))) return;
       setBusy(true);
       try {
-        const result=await api('/api/auth/logout',{method:'POST',json:{}});
-        state.content=null;state.dirty=false;state.subscribers=null;state.auth=null;
-        if (site.hostedStudio) {
-          const logoutPath=site.signOutPath(lang());
-          const parsed=new URL(logoutPath,location.href);
-          if(parsed.origin!==location.origin || parsed.pathname!=='/signout-with-chatgpt')throw new Error(t('invalidUrl'));
-          // Remove private editor/subscriber DOM before the browser can cache it.
-          frame(`<div class="cms-body"><p>${t('signingOut')}</p></div>`);
-          dialog.close();state.mode=null;state.request++;
-          navigateTop(logoutPath);
-          return;
-        }
+        await api('/api/auth/logout',{method:'POST',json:{}});
+        sessionToken='';state.content=null;state.dirty=false;state.subscribers=null;state.auth=null;state.revision=null;state.renderedTab=null;
+        // Replace all private editor/subscriber DOM before returning to the lock.
         frame(`<div class="cms-body"><p>${t('loading')}</p></div>`);
         state.auth=await api('/api/auth/status');renderAuth();
       }
@@ -547,7 +555,7 @@
   window.PortfolioCMS = Object.freeze({openAdmin:()=>openAdmin(),openSubscribe:()=>openSubscribe()});
   window.addEventListener('beforeunload',event=>{if(state.mode === 'admin' && state.dirty){event.preventDefault();event.returnValue='';}});
   const openRequestedStudio=()=>{
-    if(site.hostedStudio && !site.returningToPortfolio && new URLSearchParams(location.search).get('studio') === '1')openAdmin();
+    if(site.adminPage)openAdmin();
   };
   if(document.readyState === 'loading')document.addEventListener('DOMContentLoaded',openRequestedStudio,{once:true});
   else queueMicrotask(openRequestedStudio);

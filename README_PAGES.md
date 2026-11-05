@@ -2,17 +2,18 @@
 
 这个版本使用 **GitHub Pages 展示前台，现有 Sites 提供持久后端**。Scope、音频、摄影、三语、订阅和后台入口都保留。源码可以放在 GitHub；Pages 发布产物仅包含 `public/` 的静态内容，不包含管理员凭证、订阅名单、后端运行数据或部署令牌。
 
-仓库为 `hliu13-jms/Kirin_Sounds`。使用这个名称时，绑定自定义域名前的预期地址是：
+正式仓库为 `hliu13-jms/Kirin_Sounds`，自定义域名已绑定并启用 HTTPS：
 
 ```text
-https://hliu13-jms.github.io/Kirin_Sounds/
+https://kirinsounds.art/
 ```
 
 ## 前台、后台与公开内容
 
 - Pages 从 `public/` 发布 HTML、样式、脚本、图片、字体和音频。相对资源路径支持项目子目录，拉线后的内容使用 hash 路由，不需要服务器重写规则。
 - `public/site-config.js` 指定公开 API 的 Sites 来源。Pages 从该后端读取公开内容并提交订阅；读取与提交必须使用精确允许的 Origin，不能把管理员凭证传给跨域公开接口。
-- Pages 的后台入口采用顶级跳转，打开现有 Sites 上受保护的管理界面；管理员授权、保存、上传和订阅名单仍由后端执行。GitHub Pages 自身不运行 Node、D1 或 root 登录 API。
+- 管理入口为 `/admin/`，首页不显示登录按钮。密码验证、保存、上传和订阅名单仍由 Sites 后端执行，但界面始终留在 `kirinsounds.art/admin/`，不需要 ChatGPT 登录。Pages 自身不运行 Node、D1 或登录 API。
+- 管理会话使用只驻留页面内存的随机令牌，刷新后重新输入密码。会话四小时过期，退出立即撤销；管理 API 只接受精确允许的 HTTPS 来源与有效令牌。公共内容和订阅请求不携带管理令牌。
 - 公开内容快照（`public/content-snapshot.json`）和静态 `projects.js`／`assets/audio.json` 用作浏览回退。后端可用时读取持久内容；快照需要在源码发布时更新。私人订阅名单不能放进快照。
 - 已上传到后端的 `/uploads/` 媒体仍由后端地址提供。Foto 使用已验证的公开主页 `https://the.fotoapp.co/kirinvisions`。
 
@@ -35,7 +36,7 @@ node scripts/build-pages.mjs
 1. 在正确账号下新建或选定作品集仓库，确认默认发布分支是 `main`。先检查源码提交范围，排除 `.data/`、真实 `.env`、私人原始材料、令牌和本地依赖。
 2. 打开仓库 **Settings → Pages → Build and deployment → Source**，选择 **GitHub Actions**。
 3. 将源码与 `.github/workflows/pages.yml` 推送到 `main`。也可在 Actions 中手动运行 `Publish portfolio to GitHub Pages`。
-4. 等待 build 和 deploy 均成功，打开部署返回的实际地址，检查项目子路径下的样式、音频、Foto、三语、订阅与后台跳转。
+4. 等待 build 和 deploy 均成功，检查样式、音频、Foto、三语、订阅与 `/admin/` 密码登录。
 
 工作流仅运行静态导出，不安装依赖、不执行 Vinext 构建、不部署后端。发布使用 GitHub 提供的短期工作流身份，无需把个人访问令牌写进源码。`github-pages` 环境可限制为仅默认分支部署。
 
@@ -53,7 +54,7 @@ node scripts/build-pages.mjs
 
 ## 验收与维护
 
-部署后验证首页和各模块、播放器进度、手机布局、三语、Foto 窗口、公开内容 API，以及订阅真实入库。后台入口应打开 Sites 的受保护界面，未登录访客不能取得订阅名单或修改内容。
+部署后验证首页和各模块、播放器进度、手机布局、三语、Foto 窗口、公开内容 API，以及订阅真实入库。`/admin/` 应在当前域名内显示密码锁，未登录访客不能取得订阅名单或修改内容。后台密钥使用原生运行环境的 `ADMIN_PASSWORD_HASH` secret，不能提交到 GitHub。
 
 内容通过 Sites 后台保存后，Pages 前台可读取新的公开内容。更新前台代码、打包媒体或离线快照时，修改对应源码并推送 `main`，等待新的 Pages 部署。纯浏览器静态导出不代表远程部署已经成功，最终以 Actions 结果和实际地址验证为准。
 

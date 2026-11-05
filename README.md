@@ -5,10 +5,11 @@ An interactive portfolio in sound, photography and creative technology. Connect 
 GitHub Pages publishes the static frontend from `public/` through `.github/workflows/pages.yml`.
 
 - Pages: https://hliu13-jms.github.io/Kirin_Sounds/
-- Custom domain: https://kirinsounds.art/ (after DNS cutover)
+- Custom domain: https://kirinsounds.art/
+- Private studio: https://kirinsounds.art/admin/
 - Persistent CMS and subscriptions: https://kirinsounds-portfolio.kirinsounds.chatgpt.site/
 
-The Pages frontend reads public content and submits email subscriptions to the persistent backend. Root login opens the protected studio on that backend; administrator credentials and subscriber lists are never published in this repository. Uploaded media stays on the backend. A bundled public snapshot keeps portfolio browsing available if the API is unavailable.
+The Pages frontend reads public content and submits email subscriptions to the persistent backend. The private studio stays on `/admin/` and uses a server-verified password without ChatGPT sign-in or redirects. Its temporary bearer session is stored only in page memory, expires after four hours, and is revoked on logout. Administrator credentials and subscriber lists are never published in this repository. Uploaded media stays on the backend. A bundled public snapshot keeps portfolio browsing available if the API is unavailable.
 
 ## Run locally
 

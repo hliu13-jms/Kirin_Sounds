@@ -26,3 +26,9 @@ export const requestLimits = sqliteTable("request_limits", {
   windowStart: integer("window_start").notNull(),
   count: integer("count").notNull(),
 });
+
+export const adminSessions = sqliteTable("admin_sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  credentialHash: text("credential_hash").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
