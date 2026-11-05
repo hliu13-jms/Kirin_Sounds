@@ -306,15 +306,21 @@ async function multipartUpload(request: Request, env: CmsEnv, path: string) {
   const parts = body.parts.map((part: R2UploadedPart) => ({partNumber: part.partNumber, etag: part.etag}));
   // Retrying a completion after a lost response returns the same media path.
   if (matchingMultipart(await bucket.head(handle.key), handle)) return multipartResult(handle);
-  let object: R2Object;
-  try { object = await bucket.resumeMultipartUpload(handle.key, handle.uploadId).complete(parts); }
+  try { await bucket.resumeMultipartUpload(handle.key, handle.uploadId).complete(parts); }
   catch (error) {
     if (matchingMultipart(await bucket.head(handle.key), handle)) return multipartResult(handle);
     throw error;
   }
+  // A completion response may omit the metadata supplied at initiation. Read
+  // the authoritative stored object before validating or removing any media.
+  const object = await bucket.head(handle.key);
+  if (!object || !object.httpMetadata?.contentType || !object.customMetadata?.multipartMarker || !object.customMetadata?.uploadOwner) {
+    throw new InputError("UPLOAD_VERIFICATION_PENDING", "The audio is stored but could not yet be verified. Please retry completing the upload.", 503);
+  }
   if (!matchingMultipart(object, handle)) {
-    // This key was generated for this upload; never expose a malformed result.
-    await bucket.delete(handle.key);
+    // Only clean up a verified object belonging to this exact upload/session.
+    // Missing metadata alone must never cause a valid completed file to vanish.
+    if (object.customMetadata.multipartMarker === handle.marker && object.customMetadata.uploadOwner === handle.ownerTokenHash) await bucket.delete(handle.key);
     throw new InputError("UPLOAD_SIZE_MISMATCH", "The audio upload did not finish correctly. Please upload it again.");
   }
   return multipartResult(handle);

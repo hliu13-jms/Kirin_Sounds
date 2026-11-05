@@ -28,7 +28,7 @@ function statement(sql,args=[]){
 }
 const db={prepare:sql=>statement(sql),async batch(statements){sqlite.exec('BEGIN');try{const results=[];for(const s of statements)results.push(await s.run());sqlite.exec('COMMIT');return results;}catch(error){sqlite.exec('ROLLBACK');throw error;}}};
 const objects=new Map(), multipartUploads=new Map();
-let nextUploadId=0;
+let nextUploadId=0, corruptNextCompletedSize=false, omitCompletedHeadMetadata=false;
 function resumedMultipart(key,uploadId){
   const active=()=>{const value=multipartUploads.get(uploadId);if(!value||value.key!==key)throw new Error('NoSuchUpload');return value;};
   return {
@@ -37,13 +37,16 @@ function resumedMultipart(key,uploadId){
     async abort(){multipartUploads.delete(uploadId);},
     async complete(parts){const value=active();let size=0;for(const part of parts){const saved=value.parts.get(part.partNumber);assert.ok(saved);assert.equal(saved.etag,part.etag);size+=saved.bytes.length;}
       const bytes=new Uint8Array(size);let offset=0;for(const part of parts){const saved=value.parts.get(part.partNumber);bytes.set(saved.bytes,offset);offset+=saved.bytes.length;}
-      const object={bytes,httpMetadata:value.httpMetadata,customMetadata:value.customMetadata,httpEtag:'"multipart-etag"'};objects.set(key,object);multipartUploads.delete(uploadId);return {...object,size};}
+      const object={bytes:corruptNextCompletedSize?bytes.subarray(0,bytes.length-1):bytes,httpMetadata:value.httpMetadata,customMetadata:value.customMetadata,httpEtag:'"multipart-etag"'};corruptNextCompletedSize=false;objects.set(key,object);multipartUploads.delete(uploadId);
+      // Production completion responses can omit rich metadata, while a new
+      // HEAD reads the metadata persisted by createMultipartUpload.
+      return {key,size:object.bytes.length,httpEtag:object.httpEtag};}
   };
 }
 const hashBytes=bytes=>createHash('sha256').update(bytes).digest('hex');
 const bucket={
   async put(key,bytes,options){objects.set(key,{bytes:new Uint8Array(bytes),httpMetadata:options.httpMetadata,httpEtag:'"test-etag"'});},
-  async head(key){const object=objects.get(key);return object?{...object,size:object.bytes.length}:null;},
+  async head(key){const object=objects.get(key);return object?omitCompletedHeadMetadata?{key,size:object.bytes.length,httpEtag:object.httpEtag}:{...object,size:object.bytes.length}:null;},
   async get(key,options){const object=objects.get(key);if(!object)return null;const bytes=options?.range?object.bytes.slice(options.range.offset,options.range.offset+options.range.length):object.bytes;return {...object,body:bytes};},
   async delete(key){objects.delete(key);},
   async createMultipartUpload(key,options){const uploadId='mock-upload-'+(++nextUploadId);multipartUploads.set(uploadId,{key,...options,parts:new Map()});return resumedMultipart(key,uploadId);},
@@ -136,6 +139,15 @@ try{
   response=await call(multipartRoot+'/complete',{method:'POST',body:{uploadToken:large.uploadToken,parts},authenticated:true,csrf:true});assert.equal(response.status,201);assert.deepEqual(await response.json(),bigUpload);
   response=await call(multipartRoot+'/abort',{method:'POST',body:{uploadToken:large.uploadToken},authenticated:true,csrf:true});assert.equal(response.status,200);
   response=await call(bigUpload.url,{headers:{Range:'bytes=0-3'}});assert.equal(response.status,206);assert.equal(await response.text(),'RIFF');assert.equal(response.headers.get('Content-Range'),'bytes 0-3/'+bigSize);
+  // A genuinely corrupted stored size still fails closed and is cleaned up.
+  const corrupt=await startLarge(wav.length);response=await putPart(corrupt,1,wav);const corruptParts=[await response.json()];corruptNextCompletedSize=true;
+  response=await call(multipartRoot+'/complete',{method:'POST',body:{uploadToken:corrupt.uploadToken,parts:corruptParts},authenticated:true,csrf:true});assert.equal(response.status,400);
+  const corruptKey=JSON.parse(Buffer.from(corrupt.uploadToken.split('.')[0],'base64url').toString()).key;assert.equal(objects.has(corruptKey),false);
+  // Unavailable HEAD metadata is retryable and must not delete a valid object.
+  const pending=await startLarge(wav.length);response=await putPart(pending,1,wav);const pendingParts=[await response.json()];omitCompletedHeadMetadata=true;
+  response=await call(multipartRoot+'/complete',{method:'POST',body:{uploadToken:pending.uploadToken,parts:pendingParts},authenticated:true,csrf:true});assert.equal(response.status,503);omitCompletedHeadMetadata=false;
+  const pendingKey=JSON.parse(Buffer.from(pending.uploadToken.split('.')[0],'base64url').toString()).key;assert.equal(objects.has(pendingKey),true);
+  response=await call(multipartRoot+'/complete',{method:'POST',body:{uploadToken:pending.uploadToken,parts:pendingParts},authenticated:true,csrf:true});assert.equal(response.status,201);
   const aborted=await startLarge(1024**3);assert.equal(aborted.partCount,128);
   response=await call(multipartRoot+'/abort',{method:'POST',body:{uploadToken:aborted.uploadToken},authenticated:true,csrf:true});assert.equal(response.status,200);assert.equal(multipartUploads.size,0);
   response=await call(multipartRoot+'/part',{method:'OPTIONS',headers:{'Access-Control-Request-Method':'PUT','Access-Control-Request-Headers':'authorization,content-type,x-csrf-token,x-upload-token,x-part-number'}});assert.equal(response.status,204);assert.match(response.headers.get('Access-Control-Allow-Headers'),/X-Upload-Token/);
