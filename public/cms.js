@@ -15,7 +15,8 @@
       addProject: 'Add project', addPhoto: 'Add photograph', addAudio: 'Add audio', delete: 'Delete', removeProject: 'Delete the project “{name}”? This takes effect when you save the website.', removePhoto: 'Delete the photograph “{name}”? This takes effect when you save the website.', removeAudio: 'Delete the audio “{name}” and remove its links from projects? This takes effect when you save the website.',
       newProject: 'Untitled project', newPhoto: 'Untitled photograph', newAudio: 'New audio', src: 'Media URL or site-relative path', caption: 'Caption / image description',
       upload: 'Upload file', uploading: 'Uploading…', uploadHelp: 'Images and other files: up to 25 MiB. Save the website after uploading.', audioUploadHelp: 'Audio: up to 1 GB (1,024 MiB). Save the website after uploading.', audioTooLarge: 'Audio files can be up to 1 GB (1,024 MiB).', uploadProgress: 'Uploading {percent}% · {done} / {total} MiB', uploadRetry: 'Connection interrupted. Retrying…', uploadFinishing: 'Finishing upload…', uploaded: 'File uploaded. Save the website to use it.',
-      duration: 'Duration (seconds)', audioHelp: 'Add or edit audio here, then select its ID in a project. A new file can use a simple waveform until one is generated.', projectAudio: 'Audio linked to this project', noAudio: 'No audio yet. Add audio in the Audio tab.',
+      duration: 'Duration (seconds)', audioHelp: 'Uploading stores an audio file. To display it, choose a linked project below or create a Sound project, then save the website.', projectAudio: 'Audio linked to this project', noAudio: 'No audio yet. Add audio in the Audio tab.',
+      linkedProjects: 'Linked projects', notDisplayed: 'Not displayed on site', shownIn: 'Shown in: {places}', soundDestination: 'Sound', experimentsDestination: 'Experiments', createSoundProject: 'Create Sound project', audioProjectCreated: 'Sound project created and linked. Save the website to publish it.', unlinkedWarning: '{count} audio item(s) are not linked to a project and will not appear on the site. Choose a linked project or create a Sound project, then save.', uploadedAudio: 'Audio uploaded. Link it to a project below, or create a Sound project, then save the website.', imageOptional: 'Cover image (optional)',
       noProjects: 'No projects yet.', noPhotos: 'No photographs yet.', noSubscribers: 'The mailing list is empty.', reload: 'Refresh list', export: 'Export CSV', created: 'Joined', removeSubscriber: 'Permanently remove {name} from the mailing list?', deletedSubscriber: 'Subscriber removed.',
       email: 'Email', optionalName: 'Name (optional)', consent: 'I agree to join this mailing list and have my email and optional name stored for that purpose.', website: 'Website (leave blank)', join: 'Join list', subscribeHelp: 'Leave your email to join the list for future updates. Joining the list does not send an automatic newsletter.', joined: 'You have joined the mailing list. Thank you.',
       required: 'Complete the required fields.', mismatch: 'The passwords do not match.', passwordShort: 'Use at least 12 characters for the password.', conflict: 'The website changed elsewhere. Your edits are still here. Close and reopen the studio to load the latest version, then reapply your changes.', sessionExpired: 'Your sign-in may have expired. Your edits remain here; save a copy of your text before closing and signing in again.', requestFailed: 'The request failed', backendUnavailable: 'The editing service is unavailable. Start the included local server or use the hosted website with its backend enabled.', invalidId: 'Use a unique ID containing only letters, numbers, hyphens or underscores.', invalidUrl: 'Use an HTTPS URL or a site-relative media path.', missingMedia: 'Add a media URL or upload a file before saving.', fileTooLarge: 'The file is larger than 25 MiB.', invalidFile: 'Choose a supported image, audio, video or PDF file. HTML, SVG and scripts are not accepted.',
@@ -33,7 +34,8 @@
       addProject: '添加项目', addPhoto: '添加照片', addAudio: '添加音频', delete: '删除', removeProject: '删除项目“{name}”？保存全站后生效。', removePhoto: '删除照片“{name}”？保存全站后生效。', removeAudio: '删除音频“{name}”并取消项目中的对应关联？保存全站后生效。',
       newProject: '未命名项目', newPhoto: '未命名照片', newAudio: '新音频', src: '媒体链接或站内相对路径', caption: '图注／图片描述',
       upload: '上传文件', uploading: '上传中…', uploadHelp: '图片及其他文件最大25 MiB。上传后请保存全站。', audioUploadHelp: '音频最大1 GB（1,024 MiB）。上传后请保存全站。', audioTooLarge: '音频不能超过1 GB（1,024 MiB）。', uploadProgress: '上传中 {percent}% · {done} / {total} MiB', uploadRetry: '连接中断，正在重试…', uploadFinishing: '正在完成上传…', uploaded: '文件已上传，保存全站后用于展示。',
-      duration: '时长（秒）', audioHelp: '在这里添加或修改音频，再到项目中勾选对应ID。新音频可先使用简易波形。', projectAudio: '此项目关联的音频', noAudio: '还没有音频，请先在“音频”中添加。',
+      duration: '时长（秒）', audioHelp: '上传仅存储音频文件。要在网站展示，请在下方勾选关联作品或创建声音作品，然后保存全站。', projectAudio: '此项目关联的音频', noAudio: '还没有音频，请先在“音频”中添加。',
+      linkedProjects: '关联作品', notDisplayed: '尚未在网站展示', shownIn: '展示于：{places}', soundDestination: '声音', experimentsDestination: '实验', createSoundProject: '创建声音作品', audioProjectCreated: '已创建并关联声音作品。保存全站后即可发布。', unlinkedWarning: '{count} 个音频尚未关联作品，不会出现在网站上。请勾选关联作品或创建声音作品，然后保存全站。', uploadedAudio: '音频已上传。请在下方关联作品，或创建声音作品，然后保存全站。', imageOptional: '封面图片（选填）',
       noProjects: '暂无项目。', noPhotos: '暂无照片。', noSubscribers: '邮件名单暂无订阅者。', reload: '刷新名单', export: '导出CSV', created: '加入时间', removeSubscriber: '将{name}从邮件名单永久删除？', deletedSubscriber: '已移除订阅者。',
       email: '邮箱', optionalName: '姓名（选填）', consent: '我同意加入此邮件名单，并为此保存我的邮箱和选填姓名。', website: '网站（请留空）', join: '加入名单', subscribeHelp: '留下邮箱，加入接收未来消息的名单。加入名单不会自动发送邮件。', joined: '你已加入邮件名单，谢谢。',
       required: '请填写必填内容。', mismatch: '两次输入的密码不一致。', passwordShort: '密码至少需要12个字符。', conflict: '网站已在其他地方更新。你的修改仍保留在这里。关闭并重新打开工作室可读取最新版本，然后重新应用修改。', sessionExpired: '登录状态可能已过期。修改仍在这里；关闭并重新登录前，请先复制保留编辑的文字。', requestFailed: '请求失败', backendUnavailable: '编辑服务暂不可用。请启动附带的本地服务器，或使用已启用后台的线上网站。', invalidId: '请使用唯一ID，仅包含英文字母、数字、连字符或下划线。', invalidUrl: '请使用HTTPS链接或站内相对媒体路径。', missingMedia: '请先填写媒体链接或上传文件，再保存。', fileTooLarge: '文件超过25 MiB。', invalidFile: '请选择支持的图片、音频、视频或PDF文件，不支持HTML、SVG或脚本。',
@@ -51,7 +53,8 @@
       addProject: 'プロジェクトを追加', addPhoto: '写真を追加', addAudio: '音源を追加', delete: '削除', removeProject: 'プロジェクト「{name}」を削除しますか？サイト保存後に反映されます。', removePhoto: '写真「{name}」を削除しますか？サイト保存後に反映されます。', removeAudio: '音源「{name}」とプロジェクト内の関連づけを削除しますか？サイト保存後に反映されます。',
       newProject: '無題のプロジェクト', newPhoto: '無題の写真', newAudio: '新しい音源', src: 'メディアURLまたはサイト内の相対パス', caption: 'キャプション・画像の説明',
       upload: 'ファイルをアップロード', uploading: 'アップロード中…', uploadHelp: '画像などは最大25 MiB。アップロード後にサイトを保存してください。', audioUploadHelp: '音源は最大1 GB（1,024 MiB）。アップロード後にサイトを保存してください。', audioTooLarge: '音源は1 GB（1,024 MiB）以下にしてください。', uploadProgress: 'アップロード中 {percent}% · {done} / {total} MiB', uploadRetry: '接続が切れました。再試行中…', uploadFinishing: 'アップロードを完了しています…', uploaded: 'アップロードしました。サイトを保存して反映してください。',
-      duration: '長さ（秒）', audioHelp: 'ここで音源を追加・編集し、プロジェクトでIDを選択します。新しい音源は簡易波形で表示できます。', projectAudio: 'このプロジェクトの音源', noAudio: '音源がありません。音源タブで追加してください。',
+      duration: '長さ（秒）', audioHelp: 'アップロードは音源の保存のみ行います。サイトに表示するには、下で作品に関連づけるかSound作品を作成し、サイトを保存してください。', projectAudio: 'このプロジェクトの音源', noAudio: '音源がありません。音源タブで追加してください。',
+      linkedProjects: '関連プロジェクト', notDisplayed: 'サイトに未表示', shownIn: '表示先：{places}', soundDestination: 'Sound', experimentsDestination: 'Experiments', createSoundProject: 'Sound作品を作成', audioProjectCreated: 'Sound作品を作成して関連づけました。サイトを保存して公開してください。', unlinkedWarning: '{count} 件の音源は作品に関連づけられていないため、サイトに表示されません。関連作品を選ぶかSound作品を作成し、保存してください。', uploadedAudio: '音源をアップロードしました。下で作品に関連づけるかSound作品を作成し、サイトを保存してください。', imageOptional: 'カバー画像（任意）',
       noProjects: 'プロジェクトはまだありません。', noPhotos: '写真はまだありません。', noSubscribers: '購読者はまだいません。', reload: 'リストを更新', export: 'CSVを書き出す', created: '登録日', removeSubscriber: '{name}をメールリストから完全に削除しますか？', deletedSubscriber: '購読者を削除しました。',
       email: 'メールアドレス', optionalName: '名前（任意）', consent: 'このメールリストへの登録と、その目的でのメールアドレスおよび任意の名前の保存に同意します。', website: 'ウェブサイト（空欄にしてください）', join: '登録', subscribeHelp: '今後のお知らせのためのリストに参加できます。登録によってメールが自動送信されることはありません。', joined: 'メールリストに登録しました。ありがとうございます。',
       required: '必須項目を入力してください。', mismatch: 'パスワードが一致しません。', passwordShort: 'パスワードは12文字以上にしてください。', conflict: 'サイトは別の場所で更新されました。編集内容はここに残っています。スタジオを閉じて開き直すと最新の状態を取得できます。変更を再適用してください。', sessionExpired: 'ログインの有効期限が切れた可能性があります。編集内容は残っています。閉じて再ログインする前に文章をコピーしてください。', requestFailed: 'リクエストに失敗しました', backendUnavailable: '編集サービスを利用できません。付属のローカルサーバーを起動するか、バックエンドが有効な公開サイトを利用してください。', invalidId: '英数字、ハイフン、アンダースコアのみで一意のIDを入力してください。', invalidUrl: 'HTTPSのURLまたはサイト内の相対パスを入力してください。', missingMedia: '保存前にメディアURLを入力するか、ファイルをアップロードしてください。', fileTooLarge: 'ファイルが25 MiBを超えています。', invalidFile: '対応する画像、音源、動画、PDFを選択してください。HTML、SVG、スクリプトは使用できません。',
@@ -94,6 +97,7 @@
     dialog.addEventListener('change', event => {
       if (event.target.matches('[data-upload-path]')) upload(event.target);
       else if (event.target.matches('[data-audio-rename]')) renameAudio(event.target);
+      else if (event.target.dataset.reverseAudioProject !== undefined) linkAudioProject(event.target);
       else if (event.target.dataset.cmsPath) {
         const path=JSON.parse(event.target.dataset.cmsPath);
         if(path[0] === 'audio' && path[2] === 'src') measureAudioUrl(path);
@@ -144,13 +148,14 @@
   function captureFocus() {
     const el=document.activeElement;
     if (!dialog.contains(el)) return null;
-    return {el,path:el.dataset?.cmsPath,upload:el.dataset?.uploadPath,action:el.dataset?.cmsAction,tab:el.dataset?.tab,id:el.dataset?.id,index:el.dataset?.index,save:el.getAttribute?.('form') === 'cms-editor-form'};
+    return {el,path:el.dataset?.cmsPath,upload:el.dataset?.uploadPath,action:el.dataset?.cmsAction,tab:el.dataset?.tab,id:el.dataset?.id,index:el.dataset?.index,reverseProject:el.dataset?.reverseAudioProject,audioId:el.dataset?.audioId,save:el.getAttribute?.('form') === 'cms-editor-form'};
   }
   function restoreFocus(focus) {
     if (!focus || !dialog.open) return;
     let target=focus.el?.isConnected ? focus.el : null;
     if (!target && focus.path) target=[...dialog.querySelectorAll('[data-cms-path]')].find(el=>el.dataset.cmsPath === focus.path);
     if (!target && focus.upload) target=[...dialog.querySelectorAll('[data-upload-path]')].find(el=>el.dataset.uploadPath === focus.upload);
+    if (!target && focus.reverseProject !== undefined) target=[...dialog.querySelectorAll('[data-reverse-audio-project]')].find(el=>el.dataset.reverseAudioProject === focus.reverseProject && el.dataset.audioId === focus.audioId);
     if (!target && focus.save) target=dialog.querySelector('[form="cms-editor-form"]');
     if (!target && focus.action) target=[...dialog.querySelectorAll('[data-cms-action]')].find(el=>el.dataset.cmsAction === focus.action && el.dataset.tab === focus.tab && el.dataset.id === focus.id && el.dataset.index === focus.index);
     if (target?.disabled) target=null;
@@ -299,7 +304,8 @@
     const source = get(path);
     const preview = kind === 'image' && safeMedia(source) ? `<img class="cms-media-preview" src="${esc(mediaUrl(source))}" alt="" loading="lazy">` : '';
     const accept = kind === 'image' ? 'image/jpeg,image/png,image/webp,image/gif,image/avif' : kind === 'audio' ? 'audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/mp4,audio/aac,audio/flac,audio/webm' : 'image/jpeg,image/png,image/webp,image/gif,image/avif,audio/*,video/mp4,video/webm,application/pdf';
-    return `<div class="cms-upload">${field(label, path, {required: true})}<label class="cms-upload-button"><span>${t('upload')}</span><input type="file" accept="${accept}" data-upload-path="${esc(JSON.stringify(path))}" data-upload-kind="${kind}" aria-label="${esc(t('upload') + ' · ' + label)}"></label>${preview}<p class="cms-hint">${t(kind === 'audio' ? 'audioUploadHelp' : 'uploadHelp')}</p></div>`;
+    const optionalCover = path[0] === 'projects' && path[2] === 'image';
+    return `<div class="cms-upload">${field(optionalCover ? t('imageOptional') : label, path, {required: !optionalCover})}<label class="cms-upload-button"><span>${t('upload')}</span><input type="file" accept="${accept}" data-upload-path="${esc(JSON.stringify(path))}" data-upload-kind="${kind}" aria-label="${esc(t('upload') + ' · ' + label)}"></label>${preview}<p class="cms-hint">${t(kind === 'audio' ? 'audioUploadHelp' : 'uploadHelp')}</p></div>`;
   }
   function profilePanel() {
     const base = ['profile'];
@@ -308,8 +314,24 @@
   function projectPanel() {
     return `<div class="cms-section-tools"><span>${state.content.projects.length} / ${t('projects')}</span><button type="button" class="cms-button" data-cms-action="add-project">＋ ${t('addProject')}</button></div>${state.content.projects.length ? state.content.projects.map((p, i) => `<details class="cms-item" data-cms-item="project-${esc(p.id)}" ${i === state.content.projects.length - 1 && p.id.startsWith('project-') ? 'open' : ''}><summary>${esc(p.title || p.id)}<span>${esc(p.id)}</span></summary><div class="cms-item-body"><div class="cms-row-actions">${orderButtons('project', i, state.content.projects.length)}<button type="button" class="cms-button cms-danger" data-cms-action="delete-project" data-index="${i}">${t('delete')}</button></div><div class="cms-two-column">${field(t('id'), ['projects',i,'id'], {required:true, pattern:'[A-Za-z0-9][A-Za-z0-9_-]{0,79}',maxlength:80})}${field(t('title'), ['projects',i,'title'], {required:true, maxlength:200})}<label class="cms-field"><span>${t('category')}</span><select data-cms-path="${esc(JSON.stringify(['projects',i,'category']))}"><option value="composition" ${p.category === 'composition' ? 'selected' : ''}>${t('composition')}</option><option value="study" ${p.category === 'study' ? 'selected' : ''}>${t('study')}</option></select></label></div>${uploadField(t('image'), ['projects',i,'image'], 'image')}<fieldset class="cms-audio-selection"><legend>${t('projectAudio')}</legend>${Object.keys(state.content.audio).length ? Object.keys(state.content.audio).map(id => `<label><input type="checkbox" data-project-audio="${i}" value="${esc(id)}" ${p.audioIds?.includes(id) ? 'checked' : ''}><span>${esc(id)}</span></label>`).join('') : `<p class="cms-hint">${t('noAudio')}</p>`}</fieldset>${['status','summary','role','tools','process','note'].map(k => multilingual(k, ['projects',i,k], k !== 'status' && k !== 'tools')).join('')}</div></details>`).join('') : `<p>${t('noProjects')}</p>`}`;
   }
+  function linkedProjects(id) { return state.content.projects.filter(project => project.audioIds?.includes(id)); }
+  function audioDestination(project) { return t(project.category === 'composition' ? 'soundDestination' : 'experimentsDestination'); }
+  function unlinkedAudioIds() { return Object.keys(state.content.audio).filter(id => !linkedProjects(id).length); }
+  function audioLinks(id) {
+    const linked = linkedProjects(id);
+    const places = linked.map(project => `${audioDestination(project)} / ${project.title}`).join(' · ');
+    return `<div class="cms-audio-placement"><p class="cms-audio-visibility ${linked.length ? '' : 'is-unlinked'}">${esc(linked.length ? t('shownIn',{places}) : t('notDisplayed'))}</p><fieldset class="cms-audio-selection cms-project-selection"><legend>${t('linkedProjects')}</legend>${state.content.projects.map((project,index) => `<label><input type="checkbox" data-reverse-audio-project="${index}" data-audio-id="${esc(id)}" ${project.audioIds?.includes(id) ? 'checked' : ''}><span>${esc(project.title)}<small>${esc(audioDestination(project))}</small></span></label>`).join('')}</fieldset>${!linked.length ? `<button type="button" class="cms-button" data-cms-action="create-sound-project" data-id="${esc(id)}">＋ ${t('createSoundProject')}</button>` : ''}</div>`;
+  }
   function audioPanel() {
-    return `<div class="cms-section-tools"><span>${Object.keys(state.content.audio).length} / ${t('audio')}</span><button type="button" class="cms-button" data-cms-action="add-audio">＋ ${t('addAudio')}</button></div><p class="cms-hint">${t('audioHelp')}</p>${Object.entries(state.content.audio).map(([id, a]) => `<details class="cms-item" data-cms-item="audio-${esc(id)}"><summary>${esc(id)}<span>${Number(a.duration || 0).toFixed(2)} s</span></summary><div class="cms-item-body"><div class="cms-row-actions"><button type="button" class="cms-button cms-danger" data-cms-action="delete-audio" data-id="${esc(id)}">${t('delete')}</button></div><label class="cms-field"><span>${t('id')}</span><input value="${esc(id)}" data-audio-rename="${esc(id)}" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,79}" maxlength="80" required></label>${uploadField(t('src'), ['audio',id,'src'], 'audio')}${field(t('duration'), ['audio',id,'duration'], {type:'number',required:true})}${safeMedia(a.src) ? `<audio class="cms-audio-preview" controls preload="none" src="${esc(mediaUrl(a.src))}"></audio>` : ''}</div></details>`).join('')}`;
+    const unlinked = unlinkedAudioIds();
+    return `<div class="cms-section-tools"><span>${Object.keys(state.content.audio).length} / ${t('audio')}</span><button type="button" class="cms-button" data-cms-action="add-audio">＋ ${t('addAudio')}</button></div><p class="cms-hint">${t('audioHelp')}</p>${unlinked.length ? `<p class="cms-placement-warning" role="status">${t('unlinkedWarning',{count:unlinked.length})}</p>` : ''}${Object.entries(state.content.audio).map(([id, a]) => `<details class="cms-item" data-cms-item="audio-${esc(id)}"><summary>${esc(id)}<span>${Number(a.duration || 0).toFixed(2)} s${!linkedProjects(id).length ? ' · '+t('notDisplayed') : ''}</span></summary><div class="cms-item-body"><div class="cms-row-actions"><button type="button" class="cms-button cms-danger" data-cms-action="delete-audio" data-id="${esc(id)}">${t('delete')}</button></div><label class="cms-field"><span>${t('id')}</span><input value="${esc(id)}" data-audio-rename="${esc(id)}" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,79}" maxlength="80" required></label>${uploadField(t('src'), ['audio',id,'src'], 'audio')}${field(t('duration'), ['audio',id,'duration'], {type:'number',required:true})}${safeMedia(a.src) ? `<audio class="cms-audio-preview" controls preload="none" src="${esc(mediaUrl(a.src))}"></audio>` : ''}${audioLinks(id)}</div></details>`).join('')}`;
+  }
+  function linkAudioProject(input) {
+    if (state.busy || !state.content) return;
+    const project = state.content.projects[Number(input.dataset.reverseAudioProject)], id = input.dataset.audioId;
+    if (!project || !Object.hasOwn(state.content.audio,id)) return;
+    project.audioIds = input.checked ? [...new Set([...(project.audioIds || []),id])] : (project.audioIds || []).filter(value => value !== id);
+    markDirty(); renderEditor();
   }
   function photoPanel() {
     return `<div class="cms-section-tools"><span>${state.content.photos.length} / ${t('photos')}</span><button type="button" class="cms-button" data-cms-action="add-photo">＋ ${t('addPhoto')}</button></div>${state.content.photos.length ? state.content.photos.map((p, i) => `<details class="cms-item" data-cms-item="photo-${esc(p.id)}"><summary>${esc(localized(p.title) || p.id)}<span>${esc(p.id)}</span></summary><div class="cms-item-body"><div class="cms-row-actions">${orderButtons('photo',i,state.content.photos.length)}<button type="button" class="cms-button cms-danger" data-cms-action="delete-photo" data-index="${i}">${t('delete')}</button></div>${field(t('id'), ['photos',i,'id'], {required:true, pattern:'[A-Za-z0-9][A-Za-z0-9_-]{0,79}',maxlength:80})}${uploadField(t('src'), ['photos',i,'src'], 'image')}${multilingual('title',['photos',i,'title'],false)}${multilingual('caption',['photos',i,'caption'])}</div></details>`).join('') : `<p>${t('noPhotos')}</p>`}`;
@@ -386,7 +408,7 @@
     }
     for (const p of c.projects) {
       if (!p.title.trim()) throw new Error(t('required'));
-      if (!safeMedia(p.image)) throw new Error(`${p.title}: ${t('missingMedia')}`);
+      if (p.image && !safeMedia(p.image)) throw new Error(`${p.title}: ${t('invalidUrl')}`);
       if ((p.audioIds || []).some(id => !c.audio[id])) throw new Error(`${p.title}: ${t('noAudio')}`);
     }
     for (const p of c.photos) if (!safeMedia(p.src)) throw new Error(`${localized(p.title) || p.id}: ${t('missingMedia')}`);
@@ -403,8 +425,11 @@
     try {
       const result = await api('/api/admin/content', {method:'PUT',json:{content:state.content,expectedRevision:state.revision}});
       state.revision = result.revision; state.dirty = false;
-      renderEditor(); message(t('saved'));
+      renderEditor(); message(t('saved') + (unlinkedAudioIds().length ? ' ' + t('unlinkedWarning',{count:unlinkedAudioIds().length}) : ''));
       window.dispatchEvent(new CustomEvent('portfolio-content-saved', {detail:{revision:result.revision,updatedAt:result.updatedAt}}));
+      if (typeof BroadcastChannel === 'function') {
+        try { const channel = new BroadcastChannel('kirin-portfolio-content'); channel.postMessage({type:'portfolio-content-saved',revision:result.revision,updatedAt:result.updatedAt}); channel.close(); } catch {}
+      }
     } catch (error) { showError(error); }
     finally { setBusy(false); }
   }
@@ -466,7 +491,7 @@
         const duration = await getDuration(result.url);
         if (duration !== null) a.duration = duration;
       }
-      markDirty(); renderEditor(); message(t('uploaded'));
+      markDirty(); renderEditor(); message(t(path[0] === 'audio' ? 'uploadedAudio' : 'uploaded'));
     } catch (error) { showError(error); }
     finally { setBusy(false); if (input.isConnected) input.value=''; }
   }
@@ -524,6 +549,16 @@
     }
     if (!state.content) return;
     if (action === 'tab') { state.tab=button.dataset.tab; renderEditor(); if (state.tab === 'subscribers' && state.subscribers === null) await loadSubscribers(); return; }
+    if (action === 'create-sound-project') {
+      const audioId = button.dataset.id;
+      if (!Object.hasOwn(state.content.audio,audioId)) return;
+      const title = window.prompt(`${t('createSoundProject')} · ${t('title')}`, audioId);
+      if (title === null) return;
+      if (!title.trim() || title.length > 200) { message(t('required'),true); return; }
+      const id = uniqueId('project',state.content.projects.map(project => project.id));
+      state.content.projects.push({id,title:title.trim(),category:'composition',image:'',audioIds:[audioId],status:emptyText(),summary:emptyText(),role:emptyText(),tools:emptyText(),process:emptyText(),note:emptyText()});
+      markDirty(); renderEditor(); message(t('audioProjectCreated')); return;
+    }
     if (action === 'add-project') {
       const title=window.prompt(`${t('addProject')} · ${t('title')}`, '');
       if (title === null) return;

@@ -22,6 +22,7 @@
   // The public view-only route works for visitors; the /app/profile route opens Foto's signed-in app.
   let fotoUrl='https://the.fotoapp.co/kirinvisions';
   let portfolioContent=null;
+  let contentRevision=null, pendingContentRender=false, contentReady=false;
   let photoMode='foto';
   Object.assign(copy.en,{subscribe:'Subscribe',manage:'Root login',noPhotos:'No selected photographs have been published yet.'});
   Object.assign(copy.zh,{subscribe:'订阅更新',manage:'root 登录',noPhotos:'暂未发布精选照片。'});
@@ -50,7 +51,7 @@
   const announce=s=>{$('#announcement').textContent=s;};
   const external=(url,label)=>`<a class="external-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer"><span>${esc(label)}</span><span>↗</span></a>`;
   function player(id,title){const a=audioData[id];if(!a)return '';const duration=positiveDuration(a.duration);return `<div class="audio-player" data-player="${esc(id)}"><button class="play-button" aria-label="${esc(t('play')+' '+title)}" data-play="${esc(id)}">▶</button><div><div class="audio-text"><span>${esc(title)}</span><span class="audio-time">0:00 / ${duration?fmt(duration):'—'}</span></div><input class="audio-seek" type="range" min="0" max="${duration}" step="0.1" value="0" disabled aria-label="${esc(title+' · '+(lang==='zh'?'播放进度':lang==='ja'?'再生位置':'Playback position'))}"></div><audio preload="none" src="${esc(a.src)}" data-audio="${esc(id)}"></audio></div>`;}
-  function card(p){return `<article class="work-card"><img src="${esc(p.image)}" alt="${esc(p.title)}" loading="lazy"><div><span class="meta">${esc(t(p.category==='composition'?'soundMeta':'labMeta'))}</span><h2><button class="work-title" data-project="${p.id}">${esc(p.title)}</button></h2><p>${esc(loc(p.summary).split(/(?<=[.!?。])\s/)[0])}</p><div style="margin-top:8px"><span class="tag ${p.id==='fm'?'draft':''}">${esc(loc(p.status))}</span></div></div><button class="work-open" data-project="${p.id}" aria-label="${esc(t('detail')+' · '+p.title)}">↗</button></article>`;}
+  function card(p){const summary=loc(p.summary).trim(),status=loc(p.status).trim(),cover=String(p.image||'').trim();return `<article class="work-card${cover?'':' work-card-no-cover'}">${cover?`<img src="${esc(cover)}" alt="${esc(p.title)}" loading="lazy">`:''}<div><span class="meta">${esc(t(p.category==='composition'?'soundMeta':'labMeta'))}</span><h2><button class="work-title" data-project="${esc(p.id)}">${esc(p.title)}</button></h2>${summary?`<p>${esc(summary.split(/(?<=[.!?。])\s/)[0])}</p>`:''}${status?`<div style="margin-top:8px"><span class="tag ${p.id==='fm'?'draft':''}">${esc(status)}</span></div>`:''}</div><button class="work-open" data-project="${esc(p.id)}" aria-label="${esc(t('detail')+' · '+p.title)}">↗</button></article>`;}
   function emptyView(){const name=profileValue('name','Henglin Liu');const intro=profileValue('intro',t('heroTitle').replaceAll('<br>','\n'));return `<div class="empty-screen"><div class="empty-photo"></div><div class="empty-content"><span class="eyebrow">${esc(name.toUpperCase())} / BERKLEE EPD</span><h1>${textLines(intro)}</h1><p>${t('heroBody')}</p><button class="connect-shortcut" data-route="sound">${t('heroButton')}</button></div></div>`;}
   function soundView(){const works=window.PROJECTS.filter(p=>p.category==='composition');return `<div class="view"><div class="view-head"><div><span class="eyebrow">01 / ${t('selectedWorks')}</span><h1>${t('sound')}</h1></div><span>${String(works.length).padStart(2,'0')} ${t('projectsLabel')}</span></div><p class="view-intro">${t('soundIntro')}</p><div class="work-list">${works.map(p=>`<div>${card(p)}${player(p.audioIds[0],p.title)}</div>`).join('')}</div></div>`;}
   function experimentView(){return `<div class="view"><div class="view-head"><div><span class="eyebrow">03 / LAB NOTES</span><h1>${t('experiments')}</h1></div><span>PROCESS / STUDIES</span></div><p class="view-intro">${t('labIntro')}</p><div class="work-list lab-list">${window.PROJECTS.filter(p=>p.category==='study').map(card).join('')}</div><div class="lab-learning"><span class="eyebrow">${t('learningTitle')}</span><br>${textLines(profileValue('learning',t('learningBody')))}</div><div class="section-divider"><h2>${t('webProjects')}</h2>${external('https://hliu13-jms.github.io/Image_Destroyer_Final/','Image Destroyer')}${external('https://twisterdots.com/','Twisterdots')}</div></div>`;}
@@ -64,7 +65,7 @@
   }
   function aboutView(){const about=normalizeLines(profileValue('about',t('aboutBody')+'\n\n'+t('aboutBody2')));return `<div class="view"><span class="eyebrow">04 / ${esc(profileValue('name','Henglin Liu').toUpperCase())}</span><div class="view-head"><h1>${t('aboutTitle')}</h1></div><div class="about-layout"><div class="about-copy">${about.split(/\n\s*\n/).filter(Boolean).map(p=>`<p>${textLines(p)}</p>`).join('')}</div><img class="portrait" src="assets/portrait.webp" alt="${esc(profileValue('name','Henglin Liu'))}"></div><div class="learning"><div><b>${t('practiceLabel')}</b><p>${textLines(profileValue('practice',t('practiceBody')))}</p></div><div><b>${t('learningTitle')}</b><p>${textLines(profileValue('learning',t('learningShort')))}</p></div></div></div>`;}
   function contactView(){const email=profileValue('primaryEmail','lhl@kirinsounds.art'),secondary=profileValue('secondaryEmail','henglinliu24@163.com');return `<div class="view contact-view"><span class="eyebrow">05 / CONTACT</span><h1>${t('contactTitle')}</h1><p class="view-intro">${t('contactBody')}</p><a class="contact-email" href="mailto:${esc(email)}"><span>${esc(email)}</span><span>↗</span></a>${secondary?`<div class="contact-other">${t('alternate')}<br><a href="mailto:${esc(secondary)}">${esc(secondary)} ↗</a></div>`:''}<div class="contact-social"><a href="${esc(instagramUrl())}" target="_blank" rel="noopener noreferrer">INSTAGRAM ↗</a><a href="${esc(fotoUrl)}" target="_blank" rel="noopener noreferrer">FOTO ↗</a><button class="subscribe-inline" data-open-subscribe>${t('subscribe')}</button></div></div>`;}
-  function detailView(p){return `<div class="view detail"><button class="back-button" data-route="${route}">${t('back')} ${t(route).toUpperCase()}</button><div class="detail-title"><div><span class="eyebrow">${t(p.category==='composition'?'soundMeta':'labMeta')}</span><h1>${esc(p.title)}</h1></div><span class="tag ${p.id==='fm'?'draft':''}">${esc(loc(p.status))}</span></div>${p.image?`<img class="detail-cover" src="${esc(p.image)}" alt="${esc(p.title)}">`:''}<div class="${p.audioIds.length>1?'samples':''}">${p.audioIds.map(id=>player(id,p.audioIds.length===1?p.title:/^soni\d+$/.test(id)?'SoniMorf '+id.slice(4):/^franken\d+$/.test(id)?'FrankenSound '+id.slice(7):/^bell\d+$/.test(id)?'Bell '+id.slice(4):id)).join('')}</div><p class="detail-summary">${textLines(loc(p.summary))}</p><div class="detail-grid"><div><h2>${t('role')}</h2><p>${textLines(loc(p.role))}</p></div><div><h2>${t('tools')}</h2><p>${textLines(loc(p.tools))}</p></div></div><div class="detail-section"><h2>${t('process')}</h2><p>${textLines(loc(p.process))}</p></div><p class="project-note">${textLines(loc(p.note))}</p></div>`;}
+  function detailView(p){const status=loc(p.status).trim(),summary=loc(p.summary).trim(),process=loc(p.process).trim(),note=loc(p.note).trim(),cover=String(p.image||'').trim(),metadata=['role','tools'].filter(key=>loc(p[key]).trim());return `<div class="view detail"><button class="back-button" data-route="${route}">${t('back')} ${t(route).toUpperCase()}</button><div class="detail-title"><div><span class="eyebrow">${t(p.category==='composition'?'soundMeta':'labMeta')}</span><h1>${esc(p.title)}</h1></div>${status?`<span class="tag ${p.id==='fm'?'draft':''}">${esc(status)}</span>`:''}</div>${cover?`<img class="detail-cover" src="${esc(cover)}" alt="${esc(p.title)}">`:''}<div class="${p.audioIds.length>1?'samples':''}">${p.audioIds.map(id=>player(id,p.audioIds.length===1?p.title:/^soni\d+$/.test(id)?'SoniMorf '+id.slice(4):/^franken\d+$/.test(id)?'FrankenSound '+id.slice(7):/^bell\d+$/.test(id)?'Bell '+id.slice(4):id)).join('')}</div>${summary?`<p class="detail-summary">${textLines(summary)}</p>`:''}${metadata.length?`<div class="detail-grid${metadata.length===1?' detail-grid-single':''}">${metadata.map(key=>`<div><h2>${t(key)}</h2><p>${textLines(loc(p[key]))}</p></div>`).join('')}</div>`:''}${process?`<div class="detail-section"><h2>${t('process')}</h2><p>${textLines(process)}</p></div>`:''}${note?`<p class="project-note">${textLines(note)}</p>`:''}</div>`;}
   function stopAll(){playbackToken++;if(currentAudio)currentAudio.pause();$$('audio',screen).forEach(a=>a.pause());currentAudio=null;$('#audio-status').textContent=t('listenHint');}
   function render(){const hadFocus=screen.contains(document.activeElement);stopAll();const p=window.PROJECTS.find(p=>p.id===projectId);screen.innerHTML=p?detailView(p):({sound:soundView,photography:photoView,experiments:experimentView,about:aboutView,contact:contactView}[route]?.()||emptyView());screen.classList.toggle('foto-active',route==='photography'&&photoMode==='foto');screen.scrollTop=0;bindPlayers();bindView();updateChrome();if(hadFocus)screen.focus({preventScroll:true});if(!reduced){screen.classList.remove('flash');void screen.offsetWidth;screen.classList.add('flash');}currentWave=p?audioData[p.audioIds[0]]?.waveform:route==='sound'?audioData.fm?.waveform:null;drawScope();}
   function updateChrome(){document.documentElement.lang=lang==='zh'?'zh-CN':lang;$$('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));$$('[data-lang]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.lang===lang)));$('.skip').textContent=t('skip');$$('.output').forEach(el=>{el.setAttribute('aria-label',`${t(el.dataset.output)} ${t('out')}`);el.classList.toggle('connected',el.dataset.output===route);el.setAttribute('aria-pressed',String(el.dataset.output===route));});input.setAttribute('aria-label',t('input'));input.classList.toggle('connected',!!route);$$('.module').forEach(el=>{el.classList.toggle('connected',el.dataset.module===route);el.classList.toggle('pending',el.dataset.module===pending);});rack.classList.toggle('patched',!!route);$('#signal-label').textContent=route?t(route).toUpperCase():t('noSignal');$('#connection-label').textContent=route?t('connected').toUpperCase():t('standby');$('#disconnect').hidden=!route;$('#monitor-mode').textContent=route==='photography'?t('still'):route==='sound'||projectId?t('audio'):route?'CONNECTED':'IDLE';$('#patch-hint').textContent=pending?t('selectedHint'):t('patchHint');$('#patch-hint').classList.toggle('armed',!!pending);$('.dialog-close').setAttribute('aria-label',t('close'));if(portfolioContent){const name=profileValue('name','Henglin Liu'),artist=profileValue('artistName','KirinSounds麟');document.title=`${name} — ${artist}`;const identity=$('.header-identity span');if(identity)identity.textContent=name.toUpperCase();const brand=$('.wordmark');if(artist==='KirinSounds麟'){if(brand.innerHTML!==originalWordmark)brand.innerHTML=originalWordmark;}else brand.textContent=artist;brand.setAttribute('aria-label',artist+' home');const email=$('.site-footer a[href^="mailto:"]');if(email){email.href='mailto:'+profileValue('primaryEmail');email.textContent=profileValue('primaryEmail')+' ↗';}const ig=$('.site-footer a[href*="instagram.com"]');if(ig)ig.href=instagramUrl();}requestAnimationFrame(drawCable);}
@@ -167,9 +168,11 @@
         button.textContent='▶';button.setAttribute('aria-label',`${t('play')} ${label}`);
         if(currentAudio===a){$('#audio-status').textContent=`${t('paused')} / ${label}`;$('#monitor-mode').textContent=t('audio');}
         drawScope();
+        queueMicrotask(renderPendingContent);
       });
       a.addEventListener('ended',()=>{
         updateProgress(0);button.textContent='▶';button.setAttribute('aria-label',`${t('play')} ${label}`);$('#audio-status').textContent=t('ready');
+        queueMicrotask(renderPendingContent);
       });
       for(const event of ['loadedmetadata','durationchange','timeupdate'])a.addEventListener(event,updateProgress);
       a.addEventListener('error',()=>showAudioError(box,a.src));
@@ -200,7 +203,10 @@
       const response=await fetch(site.publicApiUrl('/api/content'),{cache:'no-store',credentials:site.publicCredentials,signal:controller.signal});
       if(!response.ok)return false;
       const payload=await response.json();
-      return applyContent(payload.content);
+      if(!Number.isSafeInteger(payload.revision)||payload.revision<1||contentRevision!==null&&payload.revision<=contentRevision)return false;
+      if(!applyContent(payload.content))return false;
+      contentRevision=payload.revision;
+      return true;
     }catch{return false;}
     finally{clearTimeout(timeout);}
   }
@@ -211,13 +217,32 @@
     }catch{}
     try{const response=await fetch('assets/audio.json',{credentials:'omit'});if(response.ok)audioData=await response.json();}catch{}
   }
-  window.addEventListener('portfolio-content-saved',async()=>{if(await refreshContent())render();});
+  function renderPendingContent(){
+    if(!pendingContentRender||currentAudio&&!currentAudio.paused)return;
+    pendingContentRender=false;
+    // The live project may not exist in the bundled snapshot. Resolve the
+    // current deep link again after applying the newer public revision.
+    readLocation();
+  }
+  async function refreshPublicContent(){
+    if(!contentReady)return;
+    if(await refreshContent())pendingContentRender=true;
+    renderPendingContent();
+  }
+  window.addEventListener('portfolio-content-saved',refreshPublicContent);
+  window.addEventListener('focus',refreshPublicContent);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshPublicContent();});
+  if(typeof BroadcastChannel!=='undefined'){
+    const updates=new BroadcastChannel('kirin-portfolio-content');
+    updates.addEventListener('message',event=>{if(event.data?.type==='portfolio-content-saved')refreshPublicContent();});
+  }
   async function init(){
     await loadSnapshot();
     readLocation();drawScope();
+    contentReady=true;
     // The bundled public snapshot stays usable while the backend is unavailable.
     // Do not interrupt audio that a visitor has already started during refresh.
-    if(await refreshContent())if(!currentAudio||currentAudio.paused)render();
+    await refreshPublicContent();
   }
   init();
 })();
