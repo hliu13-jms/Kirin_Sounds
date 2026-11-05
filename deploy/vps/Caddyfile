@@ -1,0 +1,28 @@
+kirinsounds.art {
+    encode zstd gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
+    reverse_proxy 127.0.0.1:4173 {
+        # This is the only trusted proxy hop. Replace client-supplied forwarding
+        # headers so the application sees one client IP and its public origin.
+        header_up Host kirinsounds.art
+        header_up X-Forwarded-Host kirinsounds.art
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-For {remote_host}
+        header_up -Forwarded
+        header_up -X-Real-IP
+        header_up -oai-authenticated-user-id
+        header_up -oai-authenticated-user-email
+        header_up -oai-authenticated-user-full-name
+        header_up -oai-authenticated-user-full-name-encoding
+    }
+}
+
+# Add www only after its DNS is deliberately moved from the current provider:
+# www.kirinsounds.art {
+#     redir https://kirinsounds.art{uri} permanent
+# }

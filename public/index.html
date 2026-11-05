@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#191b19">
+  <meta name="description" content="Henglin Liu / KirinSounds麟 — electronic music, modular synthesis, and darkroom & digital photography. An interactive portfolio from Berklee EPD.">
+  <meta property="og:title" content="Henglin Liu — KirinSounds麟">
+  <meta property="og:description" content="A personal signal path through sound, photography, and experiments.">
+  <meta property="og:type" content="website">
+  <title>Henglin Liu — KirinSounds麟</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/space-grotesk.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="cms.css">
+  <script src="site-config.js" defer></script>
+  <script src="projects.js" defer></script>
+  <script src="app.js" defer></script>
+  <script src="cms.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#display">Skip to content</a>
+  <header class="site-header">
+    <a class="wordmark" href="#" aria-label="KirinSounds home">kirin<span class="wordmark-second">sounds</span><span class="kirin">麟</span><span class="wordmark-dot"></span></a>
+    <div class="header-identity"><span>HENGLIN LIU</span><span data-i18n="headerPractice">SOUND / PHOTOGRAPHY</span></div>
+    <div class="header-tools">
+      <div class="language" aria-label="Language"><button data-lang="en" aria-pressed="true">EN</button><button data-lang="zh" aria-pressed="false">中</button><button data-lang="ja" aria-pressed="false">日</button></div>
+      <details class="browse"><summary data-i18n="browse">INDEX ↗</summary><nav aria-label="Portfolio"><button data-route="sound" data-i18n="sound">Sound</button><button data-route="photography" data-i18n="photography">Photography</button><button data-route="experiments" data-i18n="experiments">Experiments</button><button data-route="about" data-i18n="about">About</button><button data-route="contact" data-i18n="contact">Contact</button><button data-open-subscribe data-i18n="subscribe">Subscribe</button><button data-open-admin data-i18n="manage">Root login</button></nav></details>
+    </div>
+  </header>
+  <main>
+    <section class="intro-line"><div><span class="little-cross">＋</span><span data-i18n="intro">A personal signal path.</span></div><p data-i18n="introSub">Electronic music. Modular synthesis. Light.</p><span class="edition">PORTFOLIO / 01</span></section>
+    <section class="rack" id="rack" aria-label="Interactive portfolio patchbay">
+      <svg id="cables" aria-hidden="true"><path id="cable-shadow"></path><path id="cable"></path><path id="cable-highlight"></path><circle id="cable-tip" r="7"></circle></svg>
+      <aside class="modules" aria-label="Content modules">
+        <div class="module-heading"><span data-i18n="sources">SOURCES</span><span>OUT ↓</span></div>
+        <article class="module sound-module" data-module="sound">
+          <div class="module-top"><span>01 / AUD</span><span class="module-led"></span></div>
+          <div class="module-body"><div><h2 data-i18n="sound">Sound</h2><p data-i18n="soundSub">Compositions & performance</p></div><button class="output jack" data-output="sound" aria-label="Sound output"><span></span></button></div>
+          <svg class="module-graphic" viewBox="0 0 240 26" aria-hidden="true"><path d="M0 13H10L14 2L19 24L25 8L31 19L35 4L40 22L45 10L49 15H65L70 3L75 23L80 8L85 16L90 1L95 25L100 10L104 15H120L125 6L130 22L135 3L140 20L145 11L150 16H170L175 6L180 22L185 2L190 24L195 12H240"/></svg>
+        </article>
+        <article class="module photo-module" data-module="photography">
+          <div class="module-top"><span>02 / IMG</span><span class="module-led"></span></div>
+          <div class="module-body"><div><h2 data-i18n="photography">Photography</h2><p data-i18n="photoSub">Darkroom & digital</p></div><button class="output jack" data-output="photography" aria-label="Photography output"><span></span></button></div>
+          <div class="film-strip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+        <article class="module experiment-module" data-module="experiments">
+          <div class="module-top"><span>03 / LAB</span><span class="module-led"></span></div>
+          <div class="module-body"><div><h2 data-i18n="experiments">Experiments</h2><p data-i18n="experimentSub">Studies & works in progress</p></div><button class="output jack" data-output="experiments" aria-label="Experiments output"><span></span></button></div>
+          <div class="step-sequence" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>1 · 2 · 3 · 5 · 8</span></div>
+        </article>
+        <article class="module small-module" data-module="about"><div class="module-top"><span>04 / BIO</span><span class="module-led"></span></div><div class="module-body"><div><h2 data-i18n="about">About</h2><p>Henglin Liu / KirinSounds麟</p></div><button class="output jack" data-output="about" aria-label="About output"><span></span></button></div></article>
+        <article class="module small-module contact-module" data-module="contact"><div class="module-top"><span>05 / CON</span><span class="module-led"></span></div><div class="module-body"><div><h2 data-i18n="contact">Contact</h2><p data-i18n="contactSub">Start a conversation</p></div><button class="output jack" data-output="contact" aria-label="Contact output"><span></span></button></div></article>
+        <p id="patch-hint" class="patch-hint" data-i18n="patchHint">Drag an output to the SCOPE input.<br>Or tap an output, then tap IN.</p>
+      </aside>
+      <section class="scope-unit" aria-label="Scope display">
+        <div class="scope-top"><span class="screw" aria-hidden="true"></span><span class="device-name">KIRINSOUNDS <b>KS–01</b></span><span class="device-type">MULTIMEDIA SCOPE</span><span class="screw" aria-hidden="true"></span></div>
+        <div class="scope-patch-panel"><div class="input-group"><button id="scope-input" class="jack input-jack" aria-label="SCOPE input"><span></span></button><div><b>IN</b><span id="signal-label" data-i18n="noSignal">NO SIGNAL</span></div></div><div class="signal-state"><i></i><span id="connection-label" data-i18n="standby">STANDBY</span></div><button id="disconnect" class="disconnect" hidden data-i18n="disconnect">UNPATCH ×</button></div>
+        <div class="screen-bezel"><div id="display" class="screen" tabindex="-1"><div class="empty-screen"><div class="empty-photo"></div><div class="empty-content"><span class="eyebrow">HENGLIN LIU / BERKLEE EPD</span><h1>A practice in<br>sound & light.</h1><p>Connect a module.<br>See where the signal goes.</p></div></div></div></div>
+        <div class="scope-monitor"><div class="monitor-label"><span>SCOPE / <b id="monitor-mode">IDLE</b></span><span id="audio-status" data-i18n="listenHint">A space for close listening.</span></div><canvas id="waveform" aria-label="Audio waveform"></canvas><div class="monitor-controls"><span class="scale-label">0</span><label><span data-i18n="gain">GAIN</span><input id="gain" type="range" min="0.3" max="2.5" step="0.1" value="1" aria-label="Waveform gain"></label><label><span data-i18n="timebase">TIME</span><input id="timebase" type="range" min="1" max="5" step="1" value="2" aria-label="Waveform time scale"></label><span class="monitor-sign">KS / H.L.</span></div></div>
+        <div class="scope-bottom"><span class="screw" aria-hidden="true"></span><span data-i18n="scopeFooter">MADE OF SOUND, LIGHT & CURIOSITY</span><span>麟</span><span class="screw" aria-hidden="true"></span></div>
+      </section>
+    </section>
+    <section class="under-rack"><p id="routing-description" data-i18n="routingDescription">Choose a source. Make a connection. Explore at your own pace.</p><span>STEREO / STILL / IN MOTION</span></section>
+  </main>
+  <footer class="site-footer"><button class="footer-subscribe" data-open-subscribe data-i18n="subscribe">Subscribe</button><button class="footer-admin" data-open-admin data-i18n="manage">Root login</button><a href="mailto:lhl@kirinsounds.art">lhl@kirinsounds.art ↗</a><span>Henglin Liu © <span id="year">2026</span></span><a href="https://www.instagram.com/kirin_soundsnfotos/" target="_blank" rel="noopener noreferrer">INSTAGRAM ↗</a></footer>
+  <div class="sr-only" id="announcement" role="status" aria-live="polite"></div>
+  <dialog id="photo-dialog"><button class="dialog-close" aria-label="Close photo">×</button><img alt=""><div class="dialog-caption"></div></dialog>
+  <noscript><div class="noscript"><p>This interactive portfolio needs JavaScript. Contact Henglin Liu at <a href="mailto:lhl@kirinsounds.art">lhl@kirinsounds.art</a> or explore <a href="https://the.fotoapp.co/kirinvisions">photography on Foto</a>.</p></div></noscript>
+</body>
+</html>

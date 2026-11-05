@@ -1,0 +1,74 @@
+name: kirin-portfolio
+
+services:
+  app:
+    image: ${APP_IMAGE:-kirin-portfolio:local}
+    build:
+      context: ../..
+      dockerfile: deploy/vps/Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:24-bookworm-slim}
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    user: "1000:1000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      NODE_ENV: production
+      KIRIN_DEPLOYMENT: server
+      PUBLIC_ORIGIN: https://kirinsounds.art
+      DATA_DIR: /data
+      PORT: "4173"
+    volumes:
+      - app_data:/data
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16777216,mode=1777
+    # Caddy shares this namespace. Only Caddy's HTTP/TLS ports are published;
+    # the Node backend remains at 127.0.0.1:4173 with no host port mapping.
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "443:443/udp"
+    healthcheck:
+      test: ["CMD", "node", "/app/healthcheck.mjs"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
+    restart: unless-stopped
+    network_mode: service:app
+    depends_on:
+      app:
+        condition: service_healthy
+        restart: true
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  app_data:
+    name: ${APP_DATA_VOLUME:-kirin_app_data}
+  caddy_data:
+    name: ${CADDY_DATA_VOLUME:-kirin_caddy_data}
+  caddy_config:
+    name: ${CADDY_CONFIG_VOLUME:-kirin_caddy_config}

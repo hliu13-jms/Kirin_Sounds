@@ -1,0 +1,15 @@
+# Build-context allowlist: no .git, .data, subscribers, node_modules, Sites
+# identity, environment files, private originals, or generated Worker output.
+**
+!public/
+!public/**
+!data/
+!data/seed-content.json
+!server/
+!server/*.mjs
+!server.mjs
+!deploy/
+!deploy/vps/
+!deploy/vps/Dockerfile
+!deploy/vps/Dockerfile.dockerignore
+!deploy/vps/healthcheck.mjs
