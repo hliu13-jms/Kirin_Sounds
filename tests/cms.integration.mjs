@@ -27,11 +27,27 @@ function statement(sql,args=[]){
   };
 }
 const db={prepare:sql=>statement(sql),async batch(statements){sqlite.exec('BEGIN');try{const results=[];for(const s of statements)results.push(await s.run());sqlite.exec('COMMIT');return results;}catch(error){sqlite.exec('ROLLBACK');throw error;}}};
-const objects=new Map();
+const objects=new Map(), multipartUploads=new Map();
+let nextUploadId=0;
+function resumedMultipart(key,uploadId){
+  const active=()=>{const value=multipartUploads.get(uploadId);if(!value||value.key!==key)throw new Error('NoSuchUpload');return value;};
+  return {
+    key,uploadId,
+    async uploadPart(partNumber,bytes){const value=active(),part={partNumber,etag:hashBytes(bytes),bytes:new Uint8Array(bytes)};value.parts.set(partNumber,part);return {partNumber,etag:part.etag};},
+    async abort(){multipartUploads.delete(uploadId);},
+    async complete(parts){const value=active();let size=0;for(const part of parts){const saved=value.parts.get(part.partNumber);assert.ok(saved);assert.equal(saved.etag,part.etag);size+=saved.bytes.length;}
+      const bytes=new Uint8Array(size);let offset=0;for(const part of parts){const saved=value.parts.get(part.partNumber);bytes.set(saved.bytes,offset);offset+=saved.bytes.length;}
+      const object={bytes,httpMetadata:value.httpMetadata,customMetadata:value.customMetadata,httpEtag:'"multipart-etag"'};objects.set(key,object);multipartUploads.delete(uploadId);return {...object,size};}
+  };
+}
+const hashBytes=bytes=>createHash('sha256').update(bytes).digest('hex');
 const bucket={
   async put(key,bytes,options){objects.set(key,{bytes:new Uint8Array(bytes),httpMetadata:options.httpMetadata,httpEtag:'"test-etag"'});},
   async head(key){const object=objects.get(key);return object?{...object,size:object.bytes.length}:null;},
-  async get(key,options){const object=objects.get(key);if(!object)return null;const bytes=options?.range?object.bytes.slice(options.range.offset,options.range.offset+options.range.length):object.bytes;return {...object,body:bytes};}
+  async get(key,options){const object=objects.get(key);if(!object)return null;const bytes=options?.range?object.bytes.slice(options.range.offset,options.range.offset+options.range.length):object.bytes;return {...object,body:bytes};},
+  async delete(key){objects.delete(key);},
+  async createMultipartUpload(key,options){const uploadId='mock-upload-'+(++nextUploadId);multipartUploads.set(uploadId,{key,...options,parts:new Map()});return resumedMultipart(key,uploadId);},
+  resumeMultipartUpload:resumedMultipart
 };
 const password='Disposable test password! 2026';
 const salt='ab'.repeat(32);
@@ -86,6 +102,43 @@ try{
   response=await call(uploaded.url,{headers:{Range:'bytes=0-3'}});assert.equal(response.status,206);assert.equal(await response.text(),'RIFF');assert.equal(response.headers.get('Content-Range'),'bytes 0-3/12');
   response=await call(uploaded.url,{headers:{Range:'bytes=50-99'}});assert.equal(response.status,416);
   response=await handleCmsRequest(new Request(base+'/api/admin/upload',{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+token,'X-CSRF-Token':token,'Content-Type':'image/svg+xml'},body:'<svg/>'}),env);assert.equal(response.status,415);assert.equal(response.headers.get('Access-Control-Allow-Origin'),origin);
+  // A 26 MiB WAV crosses the old limit while every request stays at most 8 MiB.
+  const multipartRoot='/api/admin/upload/multipart',bigSize=26*1024*1024;
+  const startLarge=async(size=bigSize,mimeType='audio/wav')=>{
+    const result=await call(multipartRoot,{method:'POST',body:{name:'large test.wav',mimeType,size},authenticated:true,csrf:true});assert.equal(result.status,201,await result.clone().text());return result.json();
+  };
+  const putPart=(handle,number,bytes,headers={})=>handleCmsRequest(new Request(base+multipartRoot+'/part',{method:'PUT',headers:{Origin:origin,Authorization:'Bearer '+token,'X-CSRF-Token':token,'Content-Type':'application/octet-stream','X-Upload-Token':handle.uploadToken,'X-Part-Number':String(number),...headers},body:bytes}),env);
+  response=await call(multipartRoot,{method:'POST',body:{name:'x.wav',mimeType:'audio/wav',size:bigSize}});assert.equal(response.status,401);
+  response=await call(multipartRoot,{method:'POST',body:{name:'x.wav',mimeType:'audio/wav',size:1024**3+1},authenticated:true,csrf:true});assert.equal(response.status,413);
+  response=await call(multipartRoot,{method:'POST',body:{name:'x.jpg',mimeType:'image/jpeg',size:bigSize},authenticated:true,csrf:true});assert.equal(response.status,415);
+  response=await call(multipartRoot,{method:'POST',body:{name:'../x.wav',mimeType:'audio/wav',size:bigSize},authenticated:true,csrf:true});assert.equal(response.status,400);
+  const large=await startLarge();assert.equal(large.chunkSize,8*1024*1024);assert.equal(large.partCount,4);
+  const decoded=JSON.parse(Buffer.from(large.uploadToken.split('.')[0],'base64url').toString());assert.equal(decoded.ownerTokenHash,hash(token));assert.equal(decoded.size,bigSize);assert.equal(decoded.expiresAt<=Math.floor(Date.now()/1000)+7200,true);
+  const badToken={...large,uploadToken:large.uploadToken.slice(0,-1)+(large.uploadToken.endsWith('0')?'1':'0')};
+  response=await putPart(badToken,1,wav);assert.equal(response.status,403);
+  response=await putPart(large,0,wav);assert.equal(response.status,400);
+  response=await putPart(large,1,wav);assert.equal(response.status,400);
+  response=await putPart(large,1,wav,{'Content-Length':String(large.chunkSize+1)});assert.equal(response.status,413);
+  response=await putPart(large,1,new Uint8Array(large.chunkSize));assert.equal(response.status,415);
+  response=await putPart(large,1,wav,{Origin:'https://evil.example'});assert.equal(response.status,403);assert.equal(response.headers.get('Access-Control-Allow-Origin'),null);
+  const originalSession=token;await unlock({'CF-Connecting-IP':'192.0.2.22'});
+  response=await putPart(large,1,wav);assert.equal(response.status,403);token=originalSession;
+  const now=Date.now;try{Date.now=()=>now()+7201*1000;response=await putPart(large,1,wav);assert.equal(response.status,403);}finally{Date.now=now;}
+  response=await call(multipartRoot+'/complete',{method:'POST',body:{uploadToken:large.uploadToken,parts:[]},authenticated:true,csrf:true});assert.equal(response.status,400);
+  const parts=[];
+  for(let i=1;i<=large.partCount;i++){
+    const bytes=new Uint8Array(Math.min(large.chunkSize,bigSize-(i-1)*large.chunkSize));if(i===1)bytes.set(wav);
+    response=await putPart(large,i,bytes);assert.equal(response.status,200);assert.equal(response.headers.get('Access-Control-Allow-Origin'),origin);parts.push(await response.json());
+    if(i===1){response=await putPart(large,i,bytes);assert.equal(response.status,200);assert.deepEqual(await response.json(),parts[0]);}
+  }
+  response=await call(multipartRoot+'/complete',{method:'POST',body:{uploadToken:large.uploadToken,parts:[parts[0],parts[0],...parts.slice(2)]},authenticated:true,csrf:true});assert.equal(response.status,400);
+  response=await call(multipartRoot+'/complete',{method:'POST',body:{uploadToken:large.uploadToken,parts},authenticated:true,csrf:true});assert.equal(response.status,201,await response.clone().text());const bigUpload=await response.json();assert.equal(bigUpload.size,bigSize);assert.equal(bigUpload.mimeType,'audio/wav');
+  response=await call(multipartRoot+'/complete',{method:'POST',body:{uploadToken:large.uploadToken,parts},authenticated:true,csrf:true});assert.equal(response.status,201);assert.deepEqual(await response.json(),bigUpload);
+  response=await call(multipartRoot+'/abort',{method:'POST',body:{uploadToken:large.uploadToken},authenticated:true,csrf:true});assert.equal(response.status,200);
+  response=await call(bigUpload.url,{headers:{Range:'bytes=0-3'}});assert.equal(response.status,206);assert.equal(await response.text(),'RIFF');assert.equal(response.headers.get('Content-Range'),'bytes 0-3/'+bigSize);
+  const aborted=await startLarge(1024**3);assert.equal(aborted.partCount,128);
+  response=await call(multipartRoot+'/abort',{method:'POST',body:{uploadToken:aborted.uploadToken},authenticated:true,csrf:true});assert.equal(response.status,200);assert.equal(multipartUploads.size,0);
+  response=await call(multipartRoot+'/part',{method:'OPTIONS',headers:{'Access-Control-Request-Method':'PUT','Access-Control-Request-Headers':'authorization,content-type,x-csrf-token,x-upload-token,x-part-number'}});assert.equal(response.status,204);assert.match(response.headers.get('Access-Control-Allow-Headers'),/X-Upload-Token/);
   response=await call('/api/admin/subscribers/'+readers[0].id,{method:'DELETE',authenticated:true,csrf:true});assert.equal(response.status,200);
   response=await call('/api/admin/subscribers',{authenticated:true});assert.equal((await response.json()).subscribers.length,0);
   // Narrow admin CORS accepts only the two owned portfolio origins.
@@ -152,7 +205,7 @@ try{
   assert.equal(sqlite.prepare('SELECT count FROM request_limits WHERE key = ?').get(ipKey),undefined);
   sqlite.prepare('UPDATE request_limits SET count = 100 WHERE key = ?').run('login:global');
   response=await call('/api/auth/login',{method:'POST',body:{username:'root',password},headers:{'CF-Connecting-IP':'203.0.113.11'}});assert.equal(response.status,429);
-  console.log('Hosted password CMS passed: schema migration; PBKDF2 login; opaque hashed sessions; private setup; owner identity disabled; 4h expiry/credential rotation/revocation; exact CORS/origin and CSRF; IP/global limits; persistent CAS CRUD; subscriber dedupe/CSV/deletion; uploads/ranges; unchanged public APIs.');
+  console.log('Hosted password CMS passed: schema migration; PBKDF2 login; opaque hashed sessions; private setup; owner identity disabled; 4h expiry/credential rotation/revocation; exact CORS/origin and CSRF; IP/global limits; persistent CAS CRUD; subscriber dedupe/CSV/deletion; direct uploads/ranges; 26MiB multipart WAV, 1GiB init boundary, HMAC/session/expiry/length/type checks, idempotent part/completion and safe abort; unchanged public APIs.');
 }finally{
   sqlite.close();
   await rm(testModule,{force:true});

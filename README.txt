@@ -58,8 +58,7 @@ Foto 上的照片由 Foto 提供；包内同时保留本地精选照片和音频
 
 本地内容管理与订阅名单
 --------------------
-网站首次运行时，点击页脚的“Root login／后台登录”，或在“INDEX／目录”
-菜单中打开相同入口，给用户名 root 设置至少12个字符的
+网站首次运行时，访问本地网址的 /admin/，给用户名 root 设置至少12个字符的
 密码或口令。没有默认密码。以后使用 root 与该密码登录。
 密码只以加盐 scrypt 哈希存入本机 .data/admin.json，后台登录有效期为8小时；
 重新启动服务器后需要重新登录。此本地 root 账号与 Foto 或线上账号无关。
@@ -67,7 +66,8 @@ Foto 上的照片由 Foto 提供；包内同时保留本地精选照片和音频
 后台保存的个人介绍、项目、音频和本地摄影资料会写入 .data/content.json。
 重新加载页面或重启服务器后仍会保留。多人或多窗口同时编辑时，过期版本
 会被拒绝；重新读取最新内容后再保存，避免覆盖其他更改。
-上传图片、音频、视频或 PDF 的单个文件上限为25 MiB，文件存入 .data/uploads/。
+音频单个文件最大1 GiB；图片、视频或 PDF 最大25 MiB，文件存入 .data/uploads/。
+大文件流式写入临时文件，校验完成后才会显示；中断会清理未完成文件。
 不接受 HTML、JavaScript 或 SVG。原始文件名仅用于显示，不用作服务器路径。
 
 订阅表单需要明确勾选同意加入邮件列表。名单去重保存在 .data/subscribers.json；
@@ -81,7 +81,7 @@ root 可在后台查看、下载CSV或删除记录。目前功能是收集和管
 如需在其他磁盘保存运行数据，可设置 DATA_DIR 环境变量指向完整目录。
 同一份数据目录只供一个本地服务器进程使用。
 
-本地服务器仍然只接受本机访问；线上部署由 Sites 身份保护后台，
+本地服务器仍然只接受本机访问；线上 /admin/ 使用独立的站内密码锁，
 线上内容、上传和订阅名单与本地 .data 独立存储，不会自动相互同步。
 
 English
@@ -147,7 +147,7 @@ If Node.js is missing, install it and reopen the launcher.
 
 Local content management and email list
 ---------------------------------------
-On first use, click Root login in the footer or INDEX menu, then create a password or
+On first use, open /admin/ on the local website, then create a password or
 passphrase of at least 12 characters for username root. There is no default
 password. Later, sign in with root and that password.
 Only a salted scrypt password hash is stored in .data/admin.json. Sessions
@@ -158,7 +158,7 @@ Saved profile text, projects, audio records, and local photographs persist
 in .data/content.json across reloads and restarts. Saving an outdated revision
 is rejected; reload current content before saving to avoid overwriting
 another window's changes. Uploaded raster images, audio, video, and PDFs
-are stored in .data/uploads/. Each file is limited to 25 MiB. HTML,
+are stored in .data/uploads/. Audio supports up to 1 GiB; other files are limited to 25 MiB. HTML,
 JavaScript, and SVG uploads are rejected. Original names are display-only.
 
 Email subscription requires explicit consent. Deduplicated addresses are
@@ -175,7 +175,7 @@ Set DATA_DIR to a full directory path to keep data elsewhere. Run only
 one server process against a given data directory.
 
 The local server remains restricted to this computer. The hosted admin
-uses Sites identity. Hosted content, uploads, and subscribers are stored
+uses its standalone password lock at /admin/. Hosted content, uploads, and subscribers are stored
 separately from local .data and do not automatically sync in either direction.
 
 独立服务器模式 / Standalone VPS mode

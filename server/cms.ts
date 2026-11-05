@@ -1,11 +1,14 @@
 import seedContent from "../data/seed-content.json";
-import { InputError, MAX_CONTENT_BYTES, MAX_UPLOAD_BYTES, normalizeSubscriber, normalizeUploadMime, validateContent, validateUpload } from "./validation.mjs";
+import { InputError, MAX_CONTENT_BYTES, MAX_UPLOAD_BYTES, MAX_AUDIO_UPLOAD_BYTES, MIME_TYPES, normalizeSubscriber, normalizeUploadMime, validateContent, validateUpload } from "./validation.mjs";
 
 type CmsEnv = Pick<Cloudflare.Env, "DB" | "BUCKET" | "ADMIN_PASSWORD_HASH">;
 type AdminSession = {userId: "password:root"; token: string; tokenHash: string; expiresAt: number};
 type ContentRow = {content_json: string; revision: number; updated_at: string};
 const encoder = new TextEncoder();
 const sessionTtl = 4 * 60 * 60;
+const audioChunkBytes = 8 * 1024 * 1024;
+const multipartTtl = 2 * 60 * 60;
+type MultipartHandle = {version: 1; key: string; uploadId: string; marker: string; mimeType: string; name: string; size: number; chunkSize: number; partCount: number; expiresAt: number; ownerTokenHash: string};
 const adminOrigins = new Set(["https://kirinsounds.art", "https://www.kirinsounds.art"]);
 const publicPortfolioOrigins = new Set([
   "https://hliu13-jms.github.io",
@@ -95,19 +98,21 @@ function adminCors(request: Request, response: Response) {
 function adminMethod(path: string) {
   if (path === "/api/auth/status" || path === "/api/admin/subscribers" || path === "/api/admin/subscribers.csv") return "GET";
   if (path === "/api/auth/login" || path === "/api/auth/logout" || path === "/api/admin/upload") return "POST";
+  if (["/api/admin/upload/multipart", "/api/admin/upload/multipart/complete", "/api/admin/upload/multipart/abort"].includes(path)) return "POST";
+  if (path === "/api/admin/upload/multipart/part") return "PUT";
   if (path === "/api/admin/content") return "PUT";
   if (/^\/api\/admin\/subscribers\/[a-f0-9-]{36}$/.test(path)) return "DELETE";
   return null;
 }
 function adminPreflight(request: Request, path: string) {
   adminOrigin(request, true);
-  const allowed = new Set(["authorization", "content-type", "x-csrf-token", "x-filename"]);
+  const allowed = new Set(["authorization", "content-type", "x-csrf-token", "x-filename", "x-upload-token", "x-part-number"]);
   const requested = (request.headers.get("Access-Control-Request-Headers") || "").split(",").map(h => h.trim().toLowerCase()).filter(Boolean);
   const method = adminMethod(path);
   if (!method || request.headers.get("Access-Control-Request-Method") !== method || requested.some(h => !allowed.has(h))) {
     throw new InputError("CORS_REJECTED", "This administration request is not allowed.", 403);
   }
-  return new Response(null, {status: 204, headers: {"Access-Control-Allow-Origin": request.headers.get("Origin")!, "Access-Control-Allow-Methods": method, "Access-Control-Allow-Headers": "Authorization, Content-Type, X-CSRF-Token, X-Filename", "Access-Control-Max-Age": "600", "Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers", "Cache-Control": "no-store"}});
+  return new Response(null, {status: 204, headers: {"Access-Control-Allow-Origin": request.headers.get("Origin")!, "Access-Control-Allow-Methods": method, "Access-Control-Allow-Headers": "Authorization, Content-Type, X-CSRF-Token, X-Filename, X-Upload-Token, X-Part-Number", "Access-Control-Max-Age": "600", "Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers", "Cache-Control": "no-store"}});
 }
 async function session(request: Request, env: CmsEnv): Promise<AdminSession | null> {
   // This CMS deliberately does not use platform identities or ambient cookies.
@@ -221,6 +226,99 @@ function csvField(value: string) {
   const safe = /^[\s]*[=+\-@\t\r]/.test(value) ? "'" + value : value;
   return '"' + safe.replaceAll('"', '""') + '"';
 }
+function validUploadName(name: unknown): name is string {
+  return typeof name === "string" && name.length > 0 && name.length <= 255 && !/[\u0000-\u001f\u007f/\\]/.test(name);
+}
+async function multipartKey(env: CmsEnv) {
+  const material = await crypto.subtle.digest("SHA-256", encoder.encode("kirin-audio-multipart-v1\0" + env.ADMIN_PASSWORD_HASH));
+  return crypto.subtle.importKey("raw", material, {name: "HMAC", hash: "SHA-256"}, false, ["sign", "verify"]);
+}
+async function signMultipart(handle: MultipartHandle, env: CmsEnv) {
+  const payload = btoa(String.fromCharCode(...encoder.encode(JSON.stringify(handle)))).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+  const bytes = new Uint8Array(await crypto.subtle.sign("HMAC", await multipartKey(env), encoder.encode(payload)));
+  return payload + "." + [...bytes].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function readMultipart(value: unknown, user: AdminSession, env: CmsEnv): Promise<MultipartHandle> {
+  const invalid = () => new InputError("UPLOAD_TOKEN_INVALID", "This upload expired or belongs to a different session. Start the upload again.", 403);
+  if (typeof value !== "string" || value.length > 8192) throw invalid();
+  const match = /^([A-Za-z0-9_-]+)\.([a-f0-9]{64})$/.exec(value);
+  if (!match) throw invalid();
+  const signature = Uint8Array.from(match[2].match(/../g)!, v => parseInt(v, 16));
+  if (!(await crypto.subtle.verify("HMAC", await multipartKey(env), signature, encoder.encode(match[1])))) throw invalid();
+  let handle: MultipartHandle;
+  try {
+    const base64 = match[1].replaceAll("-", "+").replaceAll("_", "/");
+    handle = JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(Uint8Array.from(atob(base64), c => c.charCodeAt(0))));
+  } catch { throw invalid(); }
+  if (!handle || handle.version !== 1 || !validUploadName(handle.name) || typeof handle.mimeType !== "string" || !handle.mimeType.startsWith("audio/") || normalizeUploadMime(handle.mimeType) !== handle.mimeType ||
+      !Number.isSafeInteger(handle.size) || handle.size < 1 || handle.size > MAX_AUDIO_UPLOAD_BYTES || handle.chunkSize !== audioChunkBytes || handle.partCount !== Math.ceil(handle.size / audioChunkBytes) ||
+      !Number.isSafeInteger(handle.expiresAt) || handle.expiresAt <= Math.floor(Date.now() / 1000) || !equalSecret(handle.ownerTokenHash || "", user.tokenHash) ||
+      typeof handle.uploadId !== "string" || handle.uploadId.length < 1 || handle.uploadId.length > 2048 || /[\u0000-\u001f\u007f]/.test(handle.uploadId) ||
+      typeof handle.marker !== "string" || !/^[a-f0-9-]{36}$/.test(handle.marker) || typeof handle.key !== "string" ||
+      !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\.[a-z0-9]{2,5}$/.test(handle.key) || !handle.key.endsWith("." + MIME_TYPES[handle.mimeType as keyof typeof MIME_TYPES])) throw invalid();
+  return handle;
+}
+function multipartResult(handle: MultipartHandle) {
+  return json({url: `/uploads/${handle.key}`, mimeType: handle.mimeType, size: handle.size, name: handle.name}, 201);
+}
+function matchingMultipart(object: R2Object | null, handle: MultipartHandle) {
+  return !!object && object.size === handle.size && object.httpMetadata?.contentType === handle.mimeType && object.customMetadata?.multipartMarker === handle.marker && object.customMetadata?.uploadOwner === handle.ownerTokenHash;
+}
+async function multipartUpload(request: Request, env: CmsEnv, path: string) {
+  const user = await authenticatedWrite(request, env);
+  if (!env.BUCKET) throw new InputError("STORAGE_UNAVAILABLE", "Media storage is not configured.", 503);
+  const bucket = env.BUCKET;
+  if (path === "/api/admin/upload/multipart") {
+    const body = await readJson(request, 8192), mimeType = normalizeUploadMime(body?.mimeType);
+    if (!mimeType.startsWith("audio/")) throw new InputError("AUDIO_REQUIRED", "Large uploads support audio files only.", 415);
+    if (!validUploadName(body?.name)) throw new InputError("INVALID_FILENAME", "Use a filename without folders or control characters.");
+    if (!Number.isSafeInteger(body.size) || body.size < 1 || body.size > MAX_AUDIO_UPLOAD_BYTES) throw new InputError("UPLOAD_TOO_LARGE", "Audio files must be non-empty and no larger than 1 GiB.", 413);
+    const key = `${crypto.randomUUID()}.${MIME_TYPES[mimeType as keyof typeof MIME_TYPES]}`, marker = crypto.randomUUID();
+    const upload = await bucket.createMultipartUpload(key, {httpMetadata: {contentType: mimeType}, customMetadata: {originalName: encodeURIComponent(body.name), multipartMarker: marker, uploadOwner: user.tokenHash}});
+    const handle: MultipartHandle = {version: 1, key, uploadId: upload.uploadId, marker, mimeType, name: body.name, size: body.size, chunkSize: audioChunkBytes, partCount: Math.ceil(body.size / audioChunkBytes), expiresAt: Math.floor(Date.now() / 1000) + multipartTtl, ownerTokenHash: user.tokenHash};
+    return json({uploadToken: await signMultipart(handle, env), chunkSize: handle.chunkSize, partCount: handle.partCount}, 201);
+  }
+  if (path === "/api/admin/upload/multipart/part") {
+    const handle = await readMultipart(request.headers.get("X-Upload-Token"), user, env);
+    const partHeader = request.headers.get("X-Part-Number") || "";
+    if (!/^[1-9][0-9]{0,2}$/.test(partHeader) || Number(partHeader) > handle.partCount) throw new InputError("INVALID_PART", "This audio part number is invalid.");
+    if (request.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase() !== "application/octet-stream") throw new InputError("BINARY_REQUIRED", "Send the audio part as binary data.", 415);
+    const partNumber = Number(partHeader), expected = Math.min(audioChunkBytes, handle.size - (partNumber - 1) * audioChunkBytes);
+    // One bounded part is buffered, never the full audio file. The reader also
+    // rejects chunked/undeclared bodies as soon as they exceed the part size.
+    const bytes = await readBytes(request, expected);
+    if (bytes.length !== expected) throw new InputError("PART_SIZE_MISMATCH", "The audio part was interrupted or has the wrong size.");
+    if (partNumber === 1) validateUpload(handle.mimeType, bytes);
+    const part = await bucket.resumeMultipartUpload(handle.key, handle.uploadId).uploadPart(partNumber, bytes);
+    return json({partNumber: part.partNumber, etag: part.etag});
+  }
+  const body = await readJson(request, 32768), handle = await readMultipart(body?.uploadToken, user, env);
+  if (path === "/api/admin/upload/multipart/abort") {
+    const object = await bucket.head(handle.key);
+    // An abort retry after successful completion must never delete published
+    // media. Completed objects are identified by this signed upload's marker.
+    if (!matchingMultipart(object, handle)) await bucket.resumeMultipartUpload(handle.key, handle.uploadId).abort();
+    return json({ok: true});
+  }
+  if (!Array.isArray(body.parts) || body.parts.length !== handle.partCount || body.parts.some((part: {partNumber?: unknown; etag?: unknown}, i: number) => !part || part.partNumber !== i + 1 || typeof part.etag !== "string" || !part.etag.length || part.etag.length > 256 || /[\u0000-\u001f\u007f]/.test(part.etag))) {
+    throw new InputError("PARTS_INCOMPLETE", "Upload every audio part before completing the file.");
+  }
+  const parts = body.parts.map((part: R2UploadedPart) => ({partNumber: part.partNumber, etag: part.etag}));
+  // Retrying a completion after a lost response returns the same media path.
+  if (matchingMultipart(await bucket.head(handle.key), handle)) return multipartResult(handle);
+  let object: R2Object;
+  try { object = await bucket.resumeMultipartUpload(handle.key, handle.uploadId).complete(parts); }
+  catch (error) {
+    if (matchingMultipart(await bucket.head(handle.key), handle)) return multipartResult(handle);
+    throw error;
+  }
+  if (!matchingMultipart(object, handle)) {
+    // This key was generated for this upload; never expose a malformed result.
+    await bucket.delete(handle.key);
+    throw new InputError("UPLOAD_SIZE_MISMATCH", "The audio upload did not finish correctly. Please upload it again.");
+  }
+  return multipartResult(handle);
+}
 async function upload(request: Request, env: CmsEnv) {
   await authenticatedWrite(request, env);
   if (!env.BUCKET) throw new InputError("STORAGE_UNAVAILABLE", "Media storage is not configured.", 503);
@@ -291,6 +389,7 @@ async function handleCmsCore(request: Request, env: CmsEnv): Promise<Response | 
       return json({ok: true, revision: body.expectedRevision + 1, updatedAt});
     }
     if (path === "/api/admin/upload" && request.method === "POST") return await upload(request, env);
+    if ((["/api/admin/upload/multipart", "/api/admin/upload/multipart/complete", "/api/admin/upload/multipart/abort"].includes(path) && request.method === "POST") || (path === "/api/admin/upload/multipart/part" && request.method === "PUT")) return await multipartUpload(request, env, path);
     if (path === "/api/subscribe" && request.method === "POST") return publicCors(request, await subscribe(request, env));
     if ((path === "/api/admin/subscribers" || path === "/api/admin/subscribers.csv") && request.method === "GET") {
       await admin(request, env);

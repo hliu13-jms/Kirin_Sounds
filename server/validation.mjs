@@ -1,5 +1,6 @@
 export const MAX_CONTENT_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+export const MAX_AUDIO_UPLOAD_BYTES = 1024 * 1024 * 1024;
 
 export class InputError extends Error {
   constructor(code, message, status = 400, details) {
@@ -157,10 +158,14 @@ export function normalizeUploadMime(value) {
   if (!Object.hasOwn(MIME_TYPES, mime)) throw new InputError('UNSUPPORTED_MEDIA', 'Upload a supported raster image, audio, video, or PDF file. HTML, scripts and SVG are not accepted.', 415);
   return mime;
 }
+export function uploadLimit(value) {
+  return normalizeUploadMime(value).startsWith('audio/') ? MAX_AUDIO_UPLOAD_BYTES : MAX_UPLOAD_BYTES;
+}
 export function validateUpload(value, bytes) {
   const mimeType = normalizeUploadMime(value);
   if (!(bytes instanceof Uint8Array) || !bytes.length) throw new InputError('EMPTY_UPLOAD', 'Choose a non-empty file.');
-  if (bytes.length > MAX_UPLOAD_BYTES) throw new InputError('UPLOAD_TOO_LARGE', 'The file exceeds the 25 MiB limit.', 413);
+  const limit = uploadLimit(mimeType);
+  if (bytes.length > limit) throw new InputError('UPLOAD_TOO_LARGE', `The file exceeds the ${mimeType.startsWith('audio/') ? '1 GiB audio' : '25 MiB'} limit.`, 413);
   const at = (start, string) => [...string].every((char, i) => bytes[start+i] === char.charCodeAt(0));
   const ftyp = bytes.length >= 12 && at(4, 'ftyp');
   const frame = bytes.length >= 2 && bytes[0] === 255 && (bytes[1] & 0xe0) === 0xe0;

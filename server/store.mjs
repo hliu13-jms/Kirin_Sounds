@@ -1,7 +1,7 @@
-import { mkdir, readFile, writeFile, rename, unlink, realpath } from 'node:fs/promises';
+import { mkdir, open, readFile, writeFile, rename, unlink, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { InputError, validateContent, MIME_TYPES } from './validation.mjs';
+import { InputError, validateContent, normalizeUploadMime, uploadLimit, validateUpload, MIME_TYPES } from './validation.mjs';
 
 async function readJson(filename, fallback) {
   try { return JSON.parse(await readFile(filename, 'utf8')); }
@@ -43,6 +43,60 @@ export async function createStore({baseDirectory, dataDirectory}) {
     const result = transaction.then(operation);
     transaction = result.catch(() => {});
     return result;
+  }
+  async function saveUploadStream({source, mimeType: requestedMime, name, expectedSize}) {
+    const mimeType = normalizeUploadMime(requestedMime), limit = uploadLimit(mimeType);
+    const tooLarge = () => new InputError('UPLOAD_TOO_LARGE', `The file exceeds the ${mimeType.startsWith('audio/') ? '1 GiB audio' : '25 MiB'} limit.`, 413);
+    if (expectedSize !== undefined && (!Number.isSafeInteger(expectedSize) || expectedSize < 0)) throw new InputError('INVALID_LENGTH', 'The upload size is invalid.');
+    if (expectedSize > limit) throw tooLarge();
+    if (!source || typeof source[Symbol.asyncIterator] !== 'function') throw new InputError('INVALID_UPLOAD', 'Send a binary file to upload.');
+    const filename = `${randomUUID()}.${MIME_TYPES[mimeType]}`;
+    const filePath = path.join(uploadsReal, filename);
+    const temporary = path.join(uploadsReal, `${filename}.${randomUUID()}.part`);
+    // IncomingMessage's normal iterator destroys the connection on an early
+    // rejection. Keep it open long enough for the CMS to return the error.
+    const iterator = typeof source.iterator === 'function' ? source.iterator({destroyOnReturn:false}) : source[Symbol.asyncIterator]();
+    const prefix = new Uint8Array(64);
+    let handle, length = 0, prefixLength = 0, checked = false, finished = false, renamed = false, published = false;
+    try {
+      handle = await open(temporary, 'wx', 0o600);
+      while (true) {
+        let part;
+        try { part = await iterator.next(); }
+        catch { throw new InputError('REQUEST_INTERRUPTED', 'The upload was interrupted. Please try again.'); }
+        if (part.done) { finished = true; break; }
+        const chunk = part.value;
+        if (!(chunk instanceof Uint8Array)) throw new InputError('INVALID_UPLOAD', 'Send a binary file to upload.');
+        length += chunk.byteLength;
+        if (length > limit) throw tooLarge();
+        if (expectedSize !== undefined && length > expectedSize) throw new InputError('REQUEST_INTERRUPTED', 'The upload size did not match the file. Please try again.');
+        if (prefixLength < prefix.length) {
+          const take = Math.min(prefix.length - prefixLength, chunk.byteLength);
+          prefix.set(chunk.subarray(0, take), prefixLength); prefixLength += take;
+        }
+        if (!checked && prefixLength === prefix.length) { validateUpload(mimeType, prefix); checked = true; }
+        let offset = 0;
+        while (offset < chunk.byteLength) {
+          const result = await handle.write(chunk, offset, chunk.byteLength - offset);
+          if (!result.bytesWritten) throw new Error('The upload file could not be written.');
+          offset += result.bytesWritten;
+        }
+      }
+      if (expectedSize !== undefined && length !== expectedSize) throw new InputError('REQUEST_INTERRUPTED', 'The upload was incomplete. Please try again.');
+      if (!checked) validateUpload(mimeType, prefix.subarray(0, prefixLength));
+      await handle.sync(); await handle.close(); handle = undefined;
+      // Metadata is the publication boundary: getUpload cannot expose a
+      // partial file, including during the rename/metadata interval.
+      await rename(temporary, filePath); renamed = true;
+      await atomicJson(`${filePath}.json`, {mimeType, size:length, name, createdAt:new Date().toISOString()});
+      published = true;
+      return {url:`/uploads/${filename}`, mimeType, size:length, name};
+    } finally {
+      if (!finished) await iterator.return?.().catch(() => {});
+      if (handle) await handle.close().catch(() => {});
+      await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+      if (renamed && !published) await unlink(filePath).catch(error => { if (error.code !== 'ENOENT') throw error; });
+    }
   }
   return {
     getAdmin:() => admin,
@@ -86,6 +140,7 @@ export async function createStore({baseDirectory, dataDirectory}) {
       }
       return {url:`/uploads/${filename}`, mimeType, size:bytes.length, name};
     },
+    saveUploadStream,
     getUpload:async filename => {
       if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.[a-z0-9]+$/.test(filename)) return null;
       const metadata = await readJson(path.join(uploadsDirectory, `${filename}.json`), null);

@@ -14,7 +14,7 @@
       title: 'Title', id: 'ID', category: 'Category', composition: 'Composition', study: 'Study', image: 'Cover image', status: 'Status', summary: 'Summary', role: 'My role', tools: 'Tools', process: 'Process', note: 'Source / version note',
       addProject: 'Add project', addPhoto: 'Add photograph', addAudio: 'Add audio', delete: 'Delete', removeProject: 'Delete the project “{name}”? This takes effect when you save the website.', removePhoto: 'Delete the photograph “{name}”? This takes effect when you save the website.', removeAudio: 'Delete the audio “{name}” and remove its links from projects? This takes effect when you save the website.',
       newProject: 'Untitled project', newPhoto: 'Untitled photograph', newAudio: 'New audio', src: 'Media URL or site-relative path', caption: 'Caption / image description',
-      upload: 'Upload file', uploading: 'Uploading…', uploadHelp: 'Up to 25 MiB. Uploading stores the file; save the website to publish the change.', uploaded: 'File uploaded. Save the website to use it.',
+      upload: 'Upload file', uploading: 'Uploading…', uploadHelp: 'Images and other files: up to 25 MiB. Save the website after uploading.', audioUploadHelp: 'Audio: up to 1 GB (1,024 MiB). Save the website after uploading.', audioTooLarge: 'Audio files can be up to 1 GB (1,024 MiB).', uploadProgress: 'Uploading {percent}% · {done} / {total} MiB', uploadRetry: 'Connection interrupted. Retrying…', uploadFinishing: 'Finishing upload…', uploaded: 'File uploaded. Save the website to use it.',
       duration: 'Duration (seconds)', audioHelp: 'Add or edit audio here, then select its ID in a project. A new file can use a simple waveform until one is generated.', projectAudio: 'Audio linked to this project', noAudio: 'No audio yet. Add audio in the Audio tab.',
       noProjects: 'No projects yet.', noPhotos: 'No photographs yet.', noSubscribers: 'The mailing list is empty.', reload: 'Refresh list', export: 'Export CSV', created: 'Joined', removeSubscriber: 'Permanently remove {name} from the mailing list?', deletedSubscriber: 'Subscriber removed.',
       email: 'Email', optionalName: 'Name (optional)', consent: 'I agree to join this mailing list and have my email and optional name stored for that purpose.', website: 'Website (leave blank)', join: 'Join list', subscribeHelp: 'Leave your email to join the list for future updates. Joining the list does not send an automatic newsletter.', joined: 'You have joined the mailing list. Thank you.',
@@ -32,7 +32,7 @@
       title: '标题', id: '标识ID', category: '分类', composition: '作曲作品', study: '研究习作', image: '封面图片', status: '作品状态', summary: '项目摘要', role: '我的职责', tools: '工具', process: '创作过程', note: '来源／版本说明',
       addProject: '添加项目', addPhoto: '添加照片', addAudio: '添加音频', delete: '删除', removeProject: '删除项目“{name}”？保存全站后生效。', removePhoto: '删除照片“{name}”？保存全站后生效。', removeAudio: '删除音频“{name}”并取消项目中的对应关联？保存全站后生效。',
       newProject: '未命名项目', newPhoto: '未命名照片', newAudio: '新音频', src: '媒体链接或站内相对路径', caption: '图注／图片描述',
-      upload: '上传文件', uploading: '上传中…', uploadHelp: '最大25 MiB。上传会存储文件；保存全站后才会更新展示内容。', uploaded: '文件已上传，保存全站后用于展示。',
+      upload: '上传文件', uploading: '上传中…', uploadHelp: '图片及其他文件最大25 MiB。上传后请保存全站。', audioUploadHelp: '音频最大1 GB（1,024 MiB）。上传后请保存全站。', audioTooLarge: '音频不能超过1 GB（1,024 MiB）。', uploadProgress: '上传中 {percent}% · {done} / {total} MiB', uploadRetry: '连接中断，正在重试…', uploadFinishing: '正在完成上传…', uploaded: '文件已上传，保存全站后用于展示。',
       duration: '时长（秒）', audioHelp: '在这里添加或修改音频，再到项目中勾选对应ID。新音频可先使用简易波形。', projectAudio: '此项目关联的音频', noAudio: '还没有音频，请先在“音频”中添加。',
       noProjects: '暂无项目。', noPhotos: '暂无照片。', noSubscribers: '邮件名单暂无订阅者。', reload: '刷新名单', export: '导出CSV', created: '加入时间', removeSubscriber: '将{name}从邮件名单永久删除？', deletedSubscriber: '已移除订阅者。',
       email: '邮箱', optionalName: '姓名（选填）', consent: '我同意加入此邮件名单，并为此保存我的邮箱和选填姓名。', website: '网站（请留空）', join: '加入名单', subscribeHelp: '留下邮箱，加入接收未来消息的名单。加入名单不会自动发送邮件。', joined: '你已加入邮件名单，谢谢。',
@@ -50,7 +50,7 @@
       title: 'タイトル', id: 'ID', category: '分類', composition: '作曲作品', study: 'スタディ', image: 'カバー画像', status: '制作状況', summary: '概要', role: '担当', tools: 'ツール', process: '制作過程', note: '出典・バージョン',
       addProject: 'プロジェクトを追加', addPhoto: '写真を追加', addAudio: '音源を追加', delete: '削除', removeProject: 'プロジェクト「{name}」を削除しますか？サイト保存後に反映されます。', removePhoto: '写真「{name}」を削除しますか？サイト保存後に反映されます。', removeAudio: '音源「{name}」とプロジェクト内の関連づけを削除しますか？サイト保存後に反映されます。',
       newProject: '無題のプロジェクト', newPhoto: '無題の写真', newAudio: '新しい音源', src: 'メディアURLまたはサイト内の相対パス', caption: 'キャプション・画像の説明',
-      upload: 'ファイルをアップロード', uploading: 'アップロード中…', uploadHelp: '最大25 MiB。アップロード後、サイトを保存すると表示に反映されます。', uploaded: 'アップロードしました。サイトを保存して反映してください。',
+      upload: 'ファイルをアップロード', uploading: 'アップロード中…', uploadHelp: '画像などは最大25 MiB。アップロード後にサイトを保存してください。', audioUploadHelp: '音源は最大1 GB（1,024 MiB）。アップロード後にサイトを保存してください。', audioTooLarge: '音源は1 GB（1,024 MiB）以下にしてください。', uploadProgress: 'アップロード中 {percent}% · {done} / {total} MiB', uploadRetry: '接続が切れました。再試行中…', uploadFinishing: 'アップロードを完了しています…', uploaded: 'アップロードしました。サイトを保存して反映してください。',
       duration: '長さ（秒）', audioHelp: 'ここで音源を追加・編集し、プロジェクトでIDを選択します。新しい音源は簡易波形で表示できます。', projectAudio: 'このプロジェクトの音源', noAudio: '音源がありません。音源タブで追加してください。',
       noProjects: 'プロジェクトはまだありません。', noPhotos: '写真はまだありません。', noSubscribers: '購読者はまだいません。', reload: 'リストを更新', export: 'CSVを書き出す', created: '登録日', removeSubscriber: '{name}をメールリストから完全に削除しますか？', deletedSubscriber: '購読者を削除しました。',
       email: 'メールアドレス', optionalName: '名前（任意）', consent: 'このメールリストへの登録と、その目的でのメールアドレスおよび任意の名前の保存に同意します。', website: 'ウェブサイト（空欄にしてください）', join: '登録', subscribeHelp: '今後のお知らせのためのリストに参加できます。登録によってメールが自動送信されることはありません。', joined: 'メールリストに登録しました。ありがとうございます。',
@@ -299,7 +299,7 @@
     const source = get(path);
     const preview = kind === 'image' && safeMedia(source) ? `<img class="cms-media-preview" src="${esc(mediaUrl(source))}" alt="" loading="lazy">` : '';
     const accept = kind === 'image' ? 'image/jpeg,image/png,image/webp,image/gif,image/avif' : kind === 'audio' ? 'audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/mp4,audio/aac,audio/flac,audio/webm' : 'image/jpeg,image/png,image/webp,image/gif,image/avif,audio/*,video/mp4,video/webm,application/pdf';
-    return `<div class="cms-upload">${field(label, path, {required: true})}<label class="cms-upload-button"><span>${t('upload')}</span><input type="file" accept="${accept}" data-upload-path="${esc(JSON.stringify(path))}" data-upload-kind="${kind}" aria-label="${esc(t('upload') + ' · ' + label)}"></label>${preview}<p class="cms-hint">${t('uploadHelp')}</p></div>`;
+    return `<div class="cms-upload">${field(label, path, {required: true})}<label class="cms-upload-button"><span>${t('upload')}</span><input type="file" accept="${accept}" data-upload-path="${esc(JSON.stringify(path))}" data-upload-kind="${kind}" aria-label="${esc(t('upload') + ' · ' + label)}"></label>${preview}<p class="cms-hint">${t(kind === 'audio' ? 'audioUploadHelp' : 'uploadHelp')}</p></div>`;
   }
   function profilePanel() {
     const base = ['profile'];
@@ -408,19 +408,56 @@
     } catch (error) { showError(error); }
     finally { setBusy(false); }
   }
+  async function uploadMultipart(file, mime) {
+    const initialized = await api('/api/admin/upload/multipart', {method:'POST',json:{name:file.name,mimeType:mime,size:file.size}});
+    const {uploadToken,chunkSize,partCount} = initialized;
+    const parts = [];
+    const reportProgress = done => message(t('uploadProgress',{percent:Math.floor(done / file.size * 100),done:(done / 1024 / 1024).toFixed(1),total:(file.size / 1024 / 1024).toFixed(1)}));
+    const retry = async request => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try { return await request(); }
+        catch (error) {
+          if (attempt === 2 || error.status && error.status !== 408 && error.status < 500) throw error;
+          message(t('uploadRetry'));
+          await new Promise(resolve => setTimeout(resolve,500 * (attempt + 1)));
+        }
+      }
+    };
+    try {
+      if (typeof uploadToken !== 'string' || !uploadToken || uploadToken.length > 8192 || chunkSize !== 8 * 1024 * 1024 || partCount !== Math.ceil(file.size / chunkSize)) throw new Error(t('requestFailed'));
+      reportProgress(0);
+      for (let partNumber = 1; partNumber <= partCount; partNumber++) {
+        const start = (partNumber - 1) * chunkSize, end = Math.min(start + chunkSize,file.size);
+        const uploaded = await retry(() => api('/api/admin/upload/multipart/part',{method:'PUT',headers:{'Content-Type':'application/octet-stream','X-Upload-Token':uploadToken,'X-Part-Number':String(partNumber)},body:file.slice(start,end)}));
+        if (uploaded?.partNumber !== partNumber || typeof uploaded.etag !== 'string' || !uploaded.etag || uploaded.etag.length > 256) throw new Error(t('requestFailed'));
+        parts.push({partNumber,etag:uploaded.etag});
+        reportProgress(end);
+      }
+      message(t('uploadFinishing'));
+      return await retry(() => api('/api/admin/upload/multipart/complete',{method:'POST',json:{uploadToken,parts}}));
+    } catch (error) {
+      if (typeof uploadToken === 'string' && uploadToken.length <= 8192) try { await api('/api/admin/upload/multipart/abort',{method:'POST',json:{uploadToken}}); } catch {}
+      throw error;
+    }
+  }
   async function upload(input) {
     const file = input.files?.[0];
     if (!file || !state.content || state.busy) return;
     const path = JSON.parse(input.dataset.uploadPath);
-    if (file.size > 25 * 1024 * 1024) { message(t('fileTooLarge'),true); input.value=''; return; }
     let mime = file.type.toLowerCase();
     if (['audio/x-wav','audio/wave'].includes(mime)) mime='audio/wav';
     if (mime === 'audio/mp3') mime='audio/mpeg';
+    if (mime === 'audio/x-flac') mime='audio/flac';
+    if ((!mime || mime === 'application/octet-stream') && input.dataset.uploadKind === 'audio') mime=({wav:'audio/wav',mp3:'audio/mpeg',flac:'audio/flac',m4a:'audio/mp4',ogg:'audio/ogg',aac:'audio/aac',webm:'audio/webm'})[file.name.split('.').at(-1).toLowerCase()] || mime;
     if (!/^(image\/(jpeg|png|webp|gif|avif)|audio\/(mpeg|wav|ogg|mp4|aac|flac|webm)|video\/(mp4|webm)|application\/pdf)$/.test(mime) || /\.(svg|html?|js|mjs|xml|exe)$/i.test(file.name)) { message(t('invalidFile'),true); input.value=''; return; }
     if (input.dataset.uploadKind === 'image' && !mime.startsWith('image/') || input.dataset.uploadKind === 'audio' && !mime.startsWith('audio/')) { message(t('invalidFile'),true); input.value=''; return; }
+    const audio = mime.startsWith('audio/');
+    if (file.size > (audio ? 1024 ** 3 : 25 * 1024 * 1024)) { message(t(audio ? 'audioTooLarge' : 'fileTooLarge'),true); input.value=''; return; }
     setBusy(true); message(t('uploading'));
     try {
-      const result = await api('/api/admin/upload', {method:'POST',headers:{'Content-Type':mime,'X-Filename':encodeURIComponent(file.name)},body:file});
+      const result = audio && file.size > 25 * 1024 * 1024 && passwordMode()
+        ? await uploadMultipart(file,mime)
+        : await api('/api/admin/upload', {method:'POST',headers:{'Content-Type':mime,'X-Filename':encodeURIComponent(file.name)},body:file});
       if (!safeMedia(result.url)) throw new Error(t('invalidUrl'));
       put(path,result.url);
       if (path[0] === 'audio') {

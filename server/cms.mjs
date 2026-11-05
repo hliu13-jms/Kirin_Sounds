@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createStore } from './store.mjs';
 import { createAuth, hashPassword, verifyPassword, validCredential } from './auth.mjs';
-import { InputError, validateContent, normalizeSubscriber, normalizeUploadMime, validateUpload, MAX_CONTENT_BYTES, MAX_UPLOAD_BYTES } from './validation.mjs';
+import { InputError, validateContent, normalizeSubscriber, normalizeUploadMime, MAX_CONTENT_BYTES } from './validation.mjs';
 import { loadServerConfig } from './config.mjs';
 
 function json(res, status, value, headers = {}) {
@@ -162,9 +162,15 @@ export async function createLocalCms({baseDirectory,config=loadServerConfig({bas
         method(req,['POST']);auth.requireAdmin(req,true);
         const mimeType = normalizeUploadMime(req.headers['content-type']);
         const name = uploadName(req);
-        const bytes = await readBody(req,MAX_UPLOAD_BYTES);
-        const checked = validateUpload(mimeType,bytes);
-        json(res,201,await store.saveUpload({bytes,...checked,name}));
+        const declared = req.headers['content-length'];
+        if (declared !== undefined && !/^\d+$/.test(declared)) throw new InputError('INVALID_LENGTH','The upload size is invalid.');
+        const expectedSize = declared === undefined ? undefined : Number(declared);
+        try { json(res,201,await store.saveUploadStream({source:req,mimeType,name,expectedSize})); }
+        catch(error) {
+          req.once('error', () => {});
+          req.resume();
+          throw error;
+        }
       } else if (pathname === '/api/subscribe') {
         method(req,['POST']);auth.limitSubscription(req);
         const subscriber = normalizeSubscriber(await readJson(req));

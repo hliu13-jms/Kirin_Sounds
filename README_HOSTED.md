@@ -37,7 +37,9 @@ Apply each pending migration once to local preview only, using its actual genera
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_woozy_jazinda.sql
 ```
 
-Sites applies the schema migrations to hosted D1 before deployment. The first content request inserts the validated application seed only if no portfolio content exists. Later deployments never reset saved edits. R2 files use generated UUID names, a 25 MiB limit, a MIME allowlist and signature checks; they support byte-range playback from `/uploads/`.
+Sites applies the schema migrations to hosted D1 before deployment. The first content request inserts the validated application seed only if no portfolio content exists. Later deployments never reset saved edits. R2 files use generated UUID names, a MIME allowlist and signature checks; they support byte-range playback from `/uploads/`.
+
+Audio files support up to 1 GiB. Files above 25 MiB use 8 MiB R2 multipart uploads, so the Worker never buffers a whole large recording. Signed upload handles expire after two hours and are bound to the current authenticated session. Each part checks its exact expected length; the first part checks the media signature. Completion verifies the full part list and final object size. Part and completion retries are safe; failed uploads are aborted. Images, video and PDFs retain the 25 MiB limit. The Node edition streams uploads to temporary files and publishes only complete validated media. Uploaded files are linked to the public portfolio only when the owner saves the content.
 
 Subscriptions persist and deduplicate in D1. Admin listing, safe CSV export, and deletion are available. This is an email-list collection feature, not automatic newsletter delivery.
 

@@ -17,7 +17,7 @@
     return staticFrontend ? hostedOrigin + path : path;
   };
   const adminApiUrl = path => {
-    if (!adminPage || !/^\/api\/(?:auth\/(?:status|login|logout)|admin\/(?:content|upload|subscribers(?:\.csv|\/[a-zA-Z0-9-]+)?))$/.test(path)) throw new Error('This endpoint is not available here.');
+    if (!adminPage || !/^\/api\/(?:auth\/(?:status|login|logout)|admin\/(?:content|upload(?:\/multipart(?:\/(?:part|complete|abort))?)?|subscribers(?:\.csv|\/[a-zA-Z0-9-]+)?))$/.test(path)) throw new Error('This endpoint is not available here.');
     return staticFrontend ? hostedOrigin + path : path;
   };
   const mediaUrl = value => {
